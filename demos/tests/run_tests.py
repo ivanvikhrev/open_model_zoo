@@ -154,6 +154,8 @@ def main():
         num_failures = 0
 
         os.putenv('PYTHONPATH',  "{}:{}/lib".format(os.environ['PYTHONPATH'], args.demo_build_dir))
+        
+        fps_finder = re.compile(r'(?<=FPS:\s|fps:\s)[0-9]+\.?[0-9]*(?=\s)|(?<=\s)[0-9]+\.?[0-9]*(?= ?FPS| ?fps)')
 
         for demo in demos_to_test:
             print('Testing {}...'.format(demo.full_name))
@@ -211,7 +213,6 @@ def main():
                             ' '.join(shlex.quote(str(arg)) for arg in dev_arg + case_args))
                         print(flush=True)
                         try:
-                            fps_finder = re.compile(r'(?<=FPS:\s|fps:\s)[0-9]+\.?[0-9]*(?=\s)|(?<=\s)[0-9]+\.?[0-9]*(?= ?FPS| ?fps)')
                             start_time = timeit.default_timer()
                             demo_output = subprocess.check_output(fixed_args + dev_arg + case_args,
                                 stderr=subprocess.STDOUT, universal_newlines=True)
