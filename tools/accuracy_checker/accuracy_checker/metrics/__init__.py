@@ -98,6 +98,9 @@ from .im2latex_images_match import Im2latexRenderBasedMetric
 
 from .speech_recognition import SpeechRecognitionWER, SpeechRecognitionCER
 from .score_class_comparison import ScoreClassComparisonMetric
+from .dna_seq_accuracy import DNASequenceAccuracy
+
+from .gan_metrics import InceptionScore, FrechetInceptionDistance
 __all__ = [
     'Metric',
     'MetricsExecutor',
@@ -192,4 +195,9 @@ __all__ = [
     'Im2latexRenderBasedMetric',
 
     'PercentageCorrectKeypoints',
+
+    'DNASequenceAccuracy',
+
+    'InceptionScore',
+    'FrechetInceptionDistance',
 ]

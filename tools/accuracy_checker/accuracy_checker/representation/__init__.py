@@ -77,7 +77,8 @@ from .nlp_representation import (
     QuestionAnsweringEmbeddingPrediction,
     TextClassificationAnnotation,
     LanguageModelingAnnotation,
-    LanguageModelingPrediction
+    LanguageModelingPrediction,
+    QuestionAnsweringBiDAFAnnotation
 )
 from .image_inpainting import ImageInpaintingAnnotation, ImageInpaintingPrediction
 from .style_transfer import StyleTransferAnnotation, StyleTransferPrediction
@@ -85,6 +86,9 @@ from .style_transfer import StyleTransferAnnotation, StyleTransferPrediction
 from .depth_estimation import DepthEstimationAnnotation, DepthEstimationPrediction
 from .image_processing import ImageProcessingAnnotation, ImageProcessingPrediction
 from .quality_assessment import QualityAssessmentAnnotation, QualityAssessmentPrediction
+from .dna_sequence import DNASequenceAnnotation, DNASequencePrediction
+
+from .raw_representation import RawTensorAnnotation, RawTensorPrediction
 __all__ = [
     'BaseRepresentation',
 
@@ -165,12 +169,19 @@ __all__ = [
     'QuestionAnsweringPrediction',
     'QuestionAnsweringEmbeddingAnnotation',
     'QuestionAnsweringEmbeddingPrediction',
+    'QuestionAnsweringBiDAFAnnotation',
     'TextClassificationAnnotation',
     'LanguageModelingAnnotation',
     'LanguageModelingPrediction',
 
     'DepthEstimationAnnotation',
     'DepthEstimationPrediction',
+
     'QualityAssessmentAnnotation',
     'QualityAssessmentPrediction',
+
+    'DNASequenceAnnotation',
+    'DNASequencePrediction',
+    'RawTensorAnnotation',
+    'RawTensorPrediction',
 ]
