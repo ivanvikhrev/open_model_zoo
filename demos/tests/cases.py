@@ -127,6 +127,7 @@ NATIVE_DEMOS = [
             device_keys=['-d'],
             test_cases=combine_cases(
         TestCase(options={
+            '-d': 'CPU',
             '-no_show': None,
             '-time': '5',
             '-i': DataDirectoryOrigFileNamesArg('classification'),
@@ -139,6 +140,9 @@ NATIVE_DEMOS = [
             ModelArg('densenet-169'),
             ModelArg('mobilenet-v2-pytorch'),
             ModelArg('resnet-50-caffe2')),
+        single_option_cases('-nthreads', NumThreads(1), NumThreads(2), NumThreads(4), NumThreads(8)),
+        single_option_cases('-nstreams', NumStreams(1), NumStreams(2), NumStreams(4), NumStreams(8)),
+        single_option_cases('-nireq', NumIRequests(1), NumIRequests(2), NumIRequests(4), NumIRequests(8))
     )),
 
     NativeDemo(subdirectory='interactive_face_detection_demo',
@@ -208,7 +212,11 @@ NATIVE_DEMOS = [
                 '-m': ModelArg('person-detection-retail-0013'),
                 '-i': DataPatternArg('person-detection-retail'),
             }),
+
         ],
+        single_option_cases('-nthreads', NumThreads(1), NumThreads(2), NumThreads(4), NumThreads(8)),
+        single_option_cases('-nstreams', NumStreams(1), NumStreams(2), NumStreams(4), NumStreams(8)),
+        single_option_cases('-nireq', NumIRequests(1), NumIRequests(2), NumIRequests(4), NumIRequests(8))
     )),
 
     NativeDemo(subdirectory='object_detection_demo_yolov3_async', device_keys=['-d'], test_cases=combine_cases(
@@ -245,6 +253,9 @@ NATIVE_DEMOS = [
             ModelArg('license-plate-recognition-barrier-0001'),
             ModelArg('license-plate-recognition-barrier-0007')),
         single_option_cases('-m_va', None, ModelArg('vehicle-attributes-recognition-barrier-0039')),
+        single_option_cases('-nthreads', NumThreads(1), NumThreads(2), NumThreads(4), NumThreads(8)),
+        single_option_cases('-nstreams', NumStreams(1), NumStreams(2), NumStreams(4), NumStreams(8)),
+        single_option_cases('-nireq', NumIRequests(1), NumIRequests(2), NumIRequests(4), NumIRequests(8))
     )),
 
     NativeDemo(subdirectory='segmentation_demo', device_keys=['-d'], test_cases=combine_cases(
@@ -386,6 +397,9 @@ PYTHON_DEMOS = [
             ModelArg('vehicle-detection-adas-0002'),
             ModelArg('vehicle-license-plate-detection-barrier-0106'),
             ModelArg('ssd-resnet34-1200-onnx')),
+        single_option_cases('-nthreads', NumThreads(1), NumThreads(2), NumThreads(4), NumThreads(8)),
+        single_option_cases('-nstreams', NumStreams(1), NumStreams(2), NumStreams(4), NumStreams(8)),
+        single_option_cases('-nireq', NumIRequests(1), NumIRequests(2), NumIRequests(4), NumIRequests(8))
     )),
 
     PythonDemo(subdirectory='object_detection_demo_yolov3_async', device_keys=['-d'], test_cases=combine_cases(
@@ -398,6 +412,9 @@ PYTHON_DEMOS = [
             ModelArg('yolo-v2-tf'),
             ModelArg('yolo-v3-tf'),
             ModelArg('mobilefacedet-v1-mxnet')),
+        single_option_cases('-nthreads', NumThreads(1), NumThreads(2), NumThreads(4), NumThreads(8)),
+        single_option_cases('-nstreams', NumStreams(1), NumStreams(2), NumStreams(4), NumStreams(8)),
+        single_option_cases('-nireq', NumIRequests(1), NumIRequests(2), NumIRequests(4), NumIRequests(8))
     )),
 
     PythonDemo(subdirectory='segmentation_demo', device_keys=['-d'], test_cases=combine_cases(
