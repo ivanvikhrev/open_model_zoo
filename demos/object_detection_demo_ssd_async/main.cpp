@@ -32,6 +32,7 @@
 #include "async_pipeline.h"
 #include "detection_model_yolo.h"
 #include "detection_model_ssd.h"
+#include "detection_pipeline_retinaface.h"
 #include "config_factory.h"
 
 #include <gflags/gflags.h>
@@ -63,7 +64,7 @@ static const char num_streams_message[] = "Optional. Number of streams to use fo
 static const char no_show_processed_video[] = "Optional. Do not show processed video.";
 static const char utilization_monitors_message[] = "Optional. List of monitors to show initially.";
 static const char iou_thresh_output_message[] = "Optional. Filtering intersection over union threshold for overlapping boxes (YOLOv3 only).";
-static const char mt_message[] = "Model type: ssd or yolo";
+static const char mt_message[] = "Model type: ssd, yolo, rf(retinaface)";
 
 DEFINE_bool(h, false, help_message);
 DEFINE_string(i, "", video_message);
@@ -186,6 +187,12 @@ int main(int argc, char *argv[]) {
         else if (FLAGS_mt=="yolo")
         {
             model = new ModelYolo3(FLAGS_m,(float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels);
+        }
+        else if (FLAGS_mt == "rf")
+        {
+            auto rf = new DetectionPipelineRetinaface;
+            rf->init(FLAGS_m, ConfigFactory::GetUserConfig(), (float)FLAGS_t, FLAGS_auto_resize, false);
+            pipeline.reset(rf);
         }
         else
         {
