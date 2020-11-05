@@ -15,11 +15,12 @@
 */
 
 #pragma once
-#include "detection_pipeline.h"
+#include "detection_model.h"
 #include <vector>
+#include <ngraph/ngraph.hpp>
 
-class DetectionPipelineRetinaface :
-    public DetectionPipeline
+class ModelRetinaFace :
+    public DetectionModel
 {
 protected:
     struct AnchorCfgLine
@@ -30,7 +31,7 @@ protected:
         std::vector<double> ratios;
     };
 
-public: 
+public:
     struct Anchor
     {
         double left;
@@ -40,8 +41,8 @@ public:
 
         double getWidth() const { return (right - left) +1; }
         double getHeight() const { return (bottom - top) + 1; }
-        double getXCenter() const { return left + getWidth() / 2.; }
-        double getYCenter() const { return top + getHeight() / 2.; }
+        double getXCenter() const { return left + (getWidth() - 1.0) / 2.; }
+        double getYCenter() const { return top + (getHeight() - 1.0) / 2.; }
     };
 
 public:
@@ -59,16 +60,19 @@ public:
     /// than actual classes number, default "Label #N" will be shown for missing items.
     /// @param engine - pointer to InferenceEngine::Core instance to use.
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
-    virtual void init(const std::string& model_name, const CnnConfig& cnnConfig,
+    ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize,
+        bool shouldDetectMasks = false, const std::vector<std::string>& labels = std::vector<std::string>());
+  /*  virtual void init(const std::string& model_name, const CnnConfig& cnnConfig,
         float confidenceThreshold, bool useAutoResize, bool shouldDetectMasks=false,
         const std::vector<std::string>& labels = std::vector<std::string>(),
-        InferenceEngine::Core* engine = nullptr);
+        InferenceEngine::Core* engine = nullptr);*/
 
-    virtual DetectionResult getProcessedResult(bool shouldKeepOrder = true);
+    // virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool);
+    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult);
 protected:
     virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork);
     void generate_anchors_fpn();
-    std::vector<DetectionPipeline::ObjectDesc> process_output(PipelineBase::InferenceResult infResult, double scale_x, double scale_y, double face_prob_threshold);
+    //std::vector<DetectionPipeline::ObjectDesc> process_output(PipelineBase::InferenceResult infResult, double scale_x, double scale_y, double face_prob_threshold);
 
     bool shouldDetectMasks = false;
     std::vector <AnchorCfgLine> anchorCfg;

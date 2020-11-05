@@ -19,6 +19,7 @@
 * \file object_detection_demo_ssd_async/main.cpp
 * \example object_detection_demo_ssd_async/main.cpp
 */
+#include <filesystem>
 
 #include <iostream>
 #include <vector>
@@ -32,7 +33,7 @@
 #include "async_pipeline.h"
 #include "detection_model_yolo.h"
 #include "detection_model_ssd.h"
-#include "detection_pipeline_retinaface.h"
+#include "detection_model_retinaface.h"
 #include "config_factory.h"
 
 #include <gflags/gflags.h>
@@ -186,13 +187,13 @@ int main(int argc, char *argv[]) {
         }
         else if (FLAGS_mt=="yolo")
         {
-            model = new ModelYolo3(FLAGS_m,(float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels);
+            model = new ModelYolo3(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels);
         }
         else if (FLAGS_mt == "rf")
         {
-            auto rf = new DetectionPipelineRetinaface;
-            rf->init(FLAGS_m, ConfigFactory::GetUserConfig(), (float)FLAGS_t, FLAGS_auto_resize, false);
-            pipeline.reset(rf);
+            model = new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, false, FLAGS_auto_resize, labels);
+            //rf->init(FLAGS_m, ConfigFactory::GetUserConfig(), (float)FLAGS_t, FLAGS_auto_resize, false);
+            //pipeline.reset(rf);
         }
         else
         {
