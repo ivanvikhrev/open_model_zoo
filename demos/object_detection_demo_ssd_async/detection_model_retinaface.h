@@ -62,18 +62,11 @@ public:
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
     ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize,
         bool shouldDetectMasks = false, const std::vector<std::string>& labels = std::vector<std::string>());
-  /*  virtual void init(const std::string& model_name, const CnnConfig& cnnConfig,
-        float confidenceThreshold, bool useAutoResize, bool shouldDetectMasks=false,
-        const std::vector<std::string>& labels = std::vector<std::string>(),
-        InferenceEngine::Core* engine = nullptr);*/
-
-    // virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool);
     std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult);
+
 protected:
     virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork);
     void generate_anchors_fpn();
-    //std::vector<DetectionPipeline::ObjectDesc> process_output(PipelineBase::InferenceResult infResult, double scale_x, double scale_y, double face_prob_threshold);
-
     bool shouldDetectMasks = false;
     std::vector <AnchorCfgLine> anchorCfg;
     std::map<int, std::vector <Anchor>> _anchors_fpn;

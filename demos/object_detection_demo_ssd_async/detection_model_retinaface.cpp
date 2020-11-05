@@ -23,7 +23,6 @@ using namespace InferenceEngine;
 ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confidenceThreshold,
     bool useAutoResize, bool shouldDetectMasks, const std::vector<std::string>& labels)
     :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels), shouldDetectMasks(shouldDetectMasks) {
-   // this->shouldDetectMasks = shouldDetectMasks;
     anchorCfg.push_back({ 32, { 32,16 }, 16, { 1.0 } });
     anchorCfg.push_back({ 16, { 8,4 }, 16, { 1.0 } });
     anchorCfg.push_back({ 8, { 2,1 }, 16, { 1.0 } });
@@ -33,39 +32,6 @@ ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confide
     landmark_std = shouldDetectMasks ? 0.2 : 1.0;
 
 }
-//void ModelRetinaFace::init(const std::string& model_name, const CnnConfig& cnnConfig,
-//    float confidenceThreshold, bool useAutoResize, bool shouldDetectMasks,
-//    const std::vector<std::string>& labels,
-//    InferenceEngine::Core* engine) {
-//
-//    DetectionModel::init(model_name, cnnConfig, confidenceThreshold, useAutoResize, labels, engine);
-//
-//    this->shouldDetectMasks = shouldDetectMasks;
-//    anchorCfg.push_back({ 32, { 32,16 }, 16, { 1.0 } });
-//    anchorCfg.push_back({ 16, { 8,4 }, 16, { 1.0 } });
-//    anchorCfg.push_back({ 8, { 2,1 }, 16, { 1.0 } });
-//
-//    generate_anchors_fpn();
-//
-//    landmark_std = shouldDetectMasks ? 0.2 : 1.0;
-//
-//}
-
-// postprocess ?
-//ModelRetinaFace::DetectionResult DetectionPipelineRetinaface::getProcessedResult(bool shouldKeepOrder)
-//{
-//    auto infResult = PipelineBase::getInferenceResult(shouldKeepOrder);
-//    if (infResult.IsEmpty()) {
-//        return DetectionResult();
-//    }
-//
-//    DetectionResult result;
-//
-//    static_cast<ResultBase&>(result) = static_cast<ResultBase&>(infResult);
-//    result.objects = process_output(infResult,((double)netInputWidth)/infResult.extraData.cols, ((double)netInputHeight) / infResult.extraData.rows,confidenceThreshold);
-//
-//    return result;
-//}
 
 void ModelRetinaFace::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
     // --------------------------- Configure input & output ---------------------------------------------
@@ -249,19 +215,12 @@ std::vector<ModelRetinaFace::Anchor> _get_proposals(InferenceEngine::MemoryBlob:
                                                     const std::vector<ModelRetinaFace::Anchor>& anchors) {
     auto desc = rawData->getTensorDesc();
     auto sz = desc.getDims();
-    //std::cout << sz[0] << " " << sz[1] << std::endl;
-    //std::cout <<  "anchor_num " << anchor_num << std::endl;
     std::vector<ModelRetinaFace::Anchor> retVal;
-
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
     auto bbox_pred_len = sz[1] / anchor_num;
     auto blockWidth = sz[2] * sz[3];
-    std::cout <<  "blockWidth " << blockWidth << std::endl;
-    //for (int i = 0; i < anchors.size()*3; i++) {
-    //   // if (i%2 == 0)
-    //        std::cout << memPtr[i] << std::endl;
-    //}
+
     for (int i = 0; i < anchors.size(); i++) {
         auto offset = blockWidth * bbox_pred_len * (i % anchor_num) + (i / anchor_num);
         auto dx = memPtr[offset];
@@ -402,7 +361,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
 
         for (auto& sc : scores)
         {
-            if (sc < confidenceThreshold) // what threshold should be here ?
+            if (sc < confidenceThreshold)
             {
                 sc = -1;
             }
