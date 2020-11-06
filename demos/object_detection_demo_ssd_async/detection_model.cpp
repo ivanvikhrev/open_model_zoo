@@ -57,7 +57,13 @@ cv::Mat DetectionModel::renderData(ResultBase* result)
             cv::Scalar(0, 0, 255));
         cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
     }
-
+    if (result->metaData.get()->asPtr<ImageRetinaFaceMetaData>()) {
+        for (auto face_landmarks : result->metaData.get()->asPtr<ImageRetinaFaceMetaData>()->landmarks_regression) {
+            for (auto landmark : face_landmarks) {
+                cv::circle(outputImg, landmark, 5, cv::Scalar(255, 0, 255), -1);
+            }
+        }
+    }
     return outputImg;
 }
 

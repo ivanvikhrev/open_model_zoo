@@ -76,7 +76,7 @@ DEFINE_bool(pc, false, performance_counter_message);
 DEFINE_string(c, "", custom_cldnn_message);
 DEFINE_string(l, "", custom_cpu_library_message);
 DEFINE_bool(r, false, raw_output_message);
-DEFINE_double(t, 0.5, thresh_output_message);
+DEFINE_double(t, 0.8, thresh_output_message);
 DEFINE_double(iou_t, 0.4, iou_thresh_output_message);
 DEFINE_bool(auto_resize, false, input_resizable_message);
 DEFINE_uint32(nireq, 2, num_inf_req_message);

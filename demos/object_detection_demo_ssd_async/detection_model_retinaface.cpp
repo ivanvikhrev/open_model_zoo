@@ -29,8 +29,7 @@ ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confide
 
     generate_anchors_fpn();
 
-    landmark_std = shouldDetectMasks ? 0.2 : 1.0;
-
+    landmark_std = 0.2; //shouldDetectMasks ? 0.2 : 1.0;
 }
 
 void ModelRetinaFace::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
@@ -182,13 +181,14 @@ std::vector<int> nms(std::vector<ModelRetinaFace::Anchor> boxes, std::vector<dou
     for(int i=0;shouldContinue && i<ordersNum;i++)
     {
         auto idx1 = order[i];
-        if (idx1 >= 0)
+        if (idx1 >= 0) // ?
         {
             keep.push_back(idx1);
             shouldContinue = false;
 
-            for (int j = 1; j < ordersNum; j++)
+            for (int j = i + 1; j < ordersNum; j++)
             {
+                //if (j == i) continue;
                 auto idx2 = order[j];
                 if (idx2 >= 0)
                 {
@@ -278,17 +278,16 @@ std::vector<double> _get_mask_scores(InferenceEngine::MemoryBlob::Ptr rawData, i
 }
 
 
-std::vector<cv::Point2f> _get_landmarks(InferenceEngine::MemoryBlob::Ptr rawData, int anchor_num,
-                                        const std::vector<ModelRetinaFace::Anchor>& anchors) {
+std::vector<std::vector<cv::Point2f>> _get_landmarks(InferenceEngine::MemoryBlob::Ptr rawData, int anchor_num,
+                                        const std::vector<ModelRetinaFace::Anchor>& anchors, double landmark_std) {
     auto desc = rawData->getTensorDesc();
     auto sz = desc.getDims();
 
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
-
     auto landmark_pred_len = sz[1] / anchor_num;
-
-    std::vector<cv::Point2f> retVal(landmark_pred_len*sz[2] * sz[3]);
+    auto stride = landmark_pred_len * sz[2] * sz[3];
+    std::vector<std::vector<cv::Point2f>> retVal(anchors.size()); // landmark_pred_len*sz[2] * sz[3]
 
     for (int i = 0; i < anchors.size(); i++)
     {
@@ -296,17 +295,41 @@ std::vector<cv::Point2f> _get_landmarks(InferenceEngine::MemoryBlob::Ptr rawData
         auto ctrY = anchors[i].getYCenter();
         auto blockWidth = sz[2]*sz[3];
         for (int j = 0; j < ModelRetinaFace::LANDMARKS_NUM; j++) {
-            retVal.emplace_back((float)(memPtr[i + j * 2* blockWidth] * anchors[i].getWidth() + anchors[i].getXCenter()),
-                (float)(memPtr[i + (j * 2 + 1)*blockWidth] * anchors[i].getHeight() + anchors[i].getYCenter()));
+            auto dx1 = memPtr[stride + i/2 + j * 2 * blockWidth];
+            auto dy1 = memPtr[stride + i/2 + (j * 2 + 1)*blockWidth];
+            auto dx2 = memPtr[i/2 + j * 2 * blockWidth];
+            auto dy2 = memPtr[i / 2 + (j * 2 + 1)*blockWidth];
+            auto deltaX = (i % 2 ? memPtr[stride + i / 2 + j * 2 * blockWidth] : memPtr[i / 2 + j * 2 * blockWidth])* landmark_std;
+            auto deltaY = (i % 2 ? memPtr[stride + i / 2 + (j * 2 + 1)*blockWidth] : memPtr[i / 2 + (j * 2 + 1)*blockWidth]) *  landmark_std;
+            //retVal[i].emplace_back(deltaX, deltaY);
+            retVal[i].emplace_back((float)(deltaX * anchors[i].getWidth() + anchors[i].getXCenter()),
+                (float)(deltaY * anchors[i].getHeight() + anchors[i].getYCenter()));
         }
     }
     return retVal;
 }
 
+void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, MetaData*& metaData)
+{
+    auto imgData = inputData.asPtr<ImageInputData>();
+    auto& img = imgData->inputImage;
+
+    if (useAutoResize) {
+        /* Just set input blob containing read image. Resize and layout conversionx will be done automatically */
+        request->SetBlob(inputsNames[0], wrapMat2Blob(img));
+    }
+    else {
+        /* Resize and copy data from the image to the input blob */
+        Blob::Ptr frameBlob = request->GetBlob(inputsNames[0]);
+        matU8ToBlob<uint8_t>(img, frameBlob);
+    }
+
+    metaData = new ImageRetinaFaceMetaData(img);
+}
 std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infResult) {
     std::vector<Anchor> proposals_list;
     std::vector<double> scores_list;
-    std::vector<cv::Point2f> landmarks_list;
+    std::vector<std::vector<cv::Point2f>> landmarks_list;
     std::vector<double> mask_scores_list;
 
     for (int idx = 0; idx < anchorCfg.size(); idx++) {
@@ -336,28 +359,11 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         }
 
         auto proposals = _get_proposals(bbox_deltas, anchor_num, anchors);
-        auto landmarks = _get_landmarks(infResult.outputsData[separateOutputsNames[OT_LANDMARK][idx]], anchor_num, anchors);
+        auto landmarks = _get_landmarks(infResult.outputsData[separateOutputsNames[OT_LANDMARK][idx]], anchor_num, anchors, landmark_std);
         std::vector<double> maskScores;
         if (shouldDetectMasks) {
             maskScores = _get_mask_scores(infResult.outputsData[separateOutputsNames[OT_MASKSCORES][idx]], anchor_num);
         }
-
-/*      auto itp = proposals.begin();
-        auto itl = landmarks.begin();
-        auto itm = maskScores.begin();
-        for (auto its = scores.begin(); its != scores.end(); its++, itp++, itl++) {
-            if (*its < face_prob_threshold) {
-                its = scores.erase(its);
-                itp = proposals.erase(itp);
-                itl = landmarks.erase(itl);
-                if (shouldDetectMasks) {
-                    itm = maskScores.erase(itm);
-                }
-            }
-            if (shouldDetectMasks) {
-                itm++;
-            }
-        }*/
 
         for (auto& sc : scores)
         {
@@ -374,8 +380,8 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             landmarks_list.reserve(landmarks_list.size() + keep.size());
             for (auto kp : keep) {
                 proposals_list.push_back(proposals[kp]);
-                scores_list.push_back(scores[kp]);
                 landmarks_list.push_back(landmarks[kp]);
+                scores_list.push_back(scores[kp]);
                 if (shouldDetectMasks) {
                     mask_scores_list.push_back(maskScores[kp]);
                 }
@@ -385,13 +391,12 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
 
     DetectionResult* result = new DetectionResult;
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
-    auto sz = infResult.metaData.get()->asPtr<ImageMetaData>()->img.size();
+   // ImageRetinaFaceMetaData* md = new ImageRetinaFaceMetaData(*infResult.metaData.get()->asPtr<ImageMetaData>());
+   // md->landmarks_regression = std::move(landmarks_list);
+    auto sz = infResult.metaData.get()->asPtr<ImageRetinaFaceMetaData>()->img.size();
     double scale_x = ((double)netInputWidth) / sz.width;
     double scale_y = ((double)netInputHeight) / sz.height;
-    for (auto el : proposals_list) {
-        std::cout << " top left " << el.left << " " << el.top << std::endl;
-        std::cout << " bottom right " << el.right << " " << el.bottom << std::endl;
-    }
+
     for (int i = 0; i < scores_list.size(); i++) {
         DetectedObject desc;
         desc.confidence = (float)scores_list[i];
@@ -405,11 +410,13 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             /** Filtering out objects with confidence < confidence_threshold probability **/
             result->objects.push_back(desc);
         }
-        //mask_scores_list = np.reshape(mask_scores_list, -1)
-
-        //landmarks_x_coords = np.array(landmarks_list)[:, : , ::2].reshape(len(landmarks_list), -1) / scale_x
-        //landmarks_y_coords = np.array(landmarks_list)[:, : , 1::2].reshape(len(landmarks_list), -1) / scale_y
-        //landmarks_regression = [landmarks_x_coords, landmarks_y_coords]
     }
+    for (auto& face_landmarks : landmarks_list) {
+        for (auto& landmark : face_landmarks) {
+            landmark.x /= scale_x;
+            landmark.y /= scale_y;
+        }
+    }
+    infResult.metaData->asPtr<ImageRetinaFaceMetaData>()->landmarks_regression = landmarks_list;
     return std::unique_ptr<ResultBase>(result);;
 }
