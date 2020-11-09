@@ -323,7 +323,7 @@ void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::In
         matU8ToBlob<uint8_t>(img, frameBlob);
     }
 
-    metaData = std::make_shared<ImageMetaData>(img);
+    metaData = std::make_shared<ImageRetinaFaceMetaData>(img);
 }
 std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infResult) {
     std::vector<Anchor> proposals_list;
@@ -416,6 +416,6 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             landmark.y /= scale_y;
         }
     }
-    //infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = landmarks_list;
+    infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = landmarks_list;
     return std::unique_ptr<ResultBase>(result);;
 }
