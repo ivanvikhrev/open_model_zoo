@@ -31,7 +31,9 @@ from .super_resolution_converter import (
 from .imagenet import ImageNetFormatConverter
 from .icdar import ICDAR13RecognitionDatasetConverter, ICDAR15DetectionDatasetConverter
 from .im2latex import Im2latexDatasetConverter
-from .kondate_nakayosi import KondateNakayosiRecognitionDatasetConverter
+from .unicode_character_recognition import (
+    UnicodeCharacterRecognitionDatasetConverter, KondateNakayosiRecognitionDatasetConverter
+)
 from .ms_coco import MSCocoDetectionConverter, MSCocoKeypointsConverter, MSCocoSingleKeypointsConverter
 from .cityscapes import CityscapesConverter
 from .ncf_converter import MovieLensConverter
@@ -85,6 +87,10 @@ from .features_regression import FeaturesRegressionConverter
 from .nyu_depth import NYUDepthV2Converter
 from .dna_seq import DNASequenceDatasetConverter
 from .place_recognition import PlaceRecognitionDatasetConverter
+from .cluttered_mnist import ClutteredMNISTConverter
+from .mpii import MPIIDatasetConverter
+from .mapillary_20 import Mapillary20Converter
+from .antispoofing import AntispoofingDatasetConverter
 
 __all__ = [
     'BaseFormatConverter',
@@ -108,11 +114,12 @@ __all__ = [
     'SRDirectoryBased',
     'ICDAR13RecognitionDatasetConverter',
     'ICDAR15DetectionDatasetConverter',
-    'KondateNakayosiRecognitionDatasetConverter',
+    'UnicodeCharacterRecognitionDatasetConverter',
     'MSCocoKeypointsConverter',
     'MSCocoSingleKeypointsConverter',
     'MSCocoDetectionConverter',
     'CityscapesConverter',
+    'Mapillary20Converter',
     'MovieLensConverter',
     'BratsConverter',
     'BratsNumpyConverter',
@@ -158,5 +165,8 @@ __all__ = [
     'FeaturesRegressionConverter',
     'Im2latexDatasetConverter',
     'DNASequenceDatasetConverter',
-    'PlaceRecognitionDatasetConverter'
+    'PlaceRecognitionDatasetConverter',
+    'ClutteredMNISTConverter',
+    'MPIIDatasetConverter',
+    'AntispoofingDatasetConverter'
 ]
