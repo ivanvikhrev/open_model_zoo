@@ -360,6 +360,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         auto proposals = _get_proposals(bbox_deltas, anchor_num, anchors);
         auto landmarks = _get_landmarks(infResult.outputsData[separateOutputsNames[OT_LANDMARK][idx]], anchor_num, anchors, landmark_std);
         std::vector<double> maskScores;
+
         if (shouldDetectMasks) {
             maskScores = _get_mask_scores(infResult.outputsData[separateOutputsNames[OT_MASKSCORES][idx]], anchor_num);
         }
@@ -416,6 +417,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             landmark.y /= scale_y;
         }
     }
-    infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = landmarks_list;
+    //infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = landmarks_list;
+    result->landmarks_regression = std::move(landmarks_list);
     return std::unique_ptr<ResultBase>(result);;
 }

@@ -33,14 +33,21 @@ namespace DefaultRenderers {
             cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
         }
 
-        try {
-            for (auto face_landmarks : result.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression) {
-                for (auto landmark : face_landmarks) {
-                    cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
-                }
+        for (auto face_landmarks : result.landmarks_regression) {
+            for (auto landmark : face_landmarks) {
+                cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
             }
         }
-        catch (...) {}
+
+        //try {
+        //    for (auto face_landmarks : result.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression) {
+        //        for (auto landmark : face_landmarks) {
+        //            cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
+        //        }
+        //    }
+        //}
+        //catch (...) {}
+
         return outputImg;
     }
 

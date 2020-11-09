@@ -60,6 +60,8 @@ struct DetectedObject : public cv::Rect2f {
 
 struct DetectionResult : public ResultBase {
     std::vector<DetectedObject> objects;
+    std::vector<std::vector<cv::Point2f>> landmarks_regression;
+    //std::vector<cv::Mat> masks;
 };
 
 struct SegmentationResult : public ResultBase
