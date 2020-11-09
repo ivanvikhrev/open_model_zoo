@@ -37,3 +37,13 @@ struct ImageInputData : public InputData{
         inputImage = img;
     }
 };
+
+struct ImageRetinaFaceInputData : public ImageInputData {
+    std::vector<std::vector<cv::Point2f>> landmarks_regression;
+    std::vector<cv::Mat> masks;
+
+    ImageRetinaFaceInputData() : ImageInputData() {}
+    ImageRetinaFaceInputData(const cv::Mat& img) : ImageInputData(img) {}
+    ImageRetinaFaceInputData(std::vector<std::vector<cv::Point2f>> landmarks_regression) : landmarks_regression(landmarks_regression) {}
+
+};

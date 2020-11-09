@@ -41,35 +41,9 @@ void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::Inf
         matU8ToBlob<uint8_t>(img, frameBlob);
     }
 
-<<<<<<< HEAD:demos/object_detection_demo_ssd_async/detection_model.cpp
-    metaData = new ImageMetaData(img);
-}
-
-cv::Mat DetectionModel::renderData(ResultBase* result)
-{
-    // Visualizing result data over source image
-    cv::Mat outputImg = result->metaData.get()->asPtr<ImageMetaData>()->img.clone();
-
-    for (auto obj : result->asPtr<DetectionResult>()->objects) {
-        std::ostringstream conf;
-        conf << ":" << std::fixed << std::setprecision(3) << obj.confidence;
-        cv::putText(outputImg, obj.label + conf.str(),
-            cv::Point2f(obj.x, obj.y - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
-            cv::Scalar(0, 0, 255));
-        cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
-    }
-    if (result->metaData.get()->asPtr<ImageRetinaFaceMetaData>()) {
-        for (auto face_landmarks : result->metaData.get()->asPtr<ImageRetinaFaceMetaData>()->landmarks_regression) {
-            for (auto landmark : face_landmarks) {
-                cv::circle(outputImg, landmark, 5, cv::Scalar(255, 0, 255), -1);
-            }
-        }
-    }
-    return outputImg;
-=======
     metaData = std::make_shared<ImageMetaData>(img);
->>>>>>> object_detection_demo_ssd_async_common_pipeline:demos/object_detection_demo/detection_model.cpp
 }
+
 
 std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFilename){
     std::vector<std::string> labelsList;
