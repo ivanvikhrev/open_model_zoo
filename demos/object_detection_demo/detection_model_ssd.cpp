@@ -19,6 +19,7 @@
 #include <ngraph/ngraph.hpp>
 
 using namespace InferenceEngine;
+
 ModelSSD::ModelSSD(const std::string& modelFileName,
     float confidenceThreshold, bool useAutoResize,
     const std::vector<std::string>& labels)
@@ -48,33 +49,37 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
     const float *detections = outputMapped.as<float*>();
 
     DetectionResult* result = new DetectionResult;
+    auto retVal = std::unique_ptr<ResultBase>(result);
+
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
 
-    auto sz = infResult.metaData.get()->asPtr<ImageMetaData>()->img.size();
+    auto sz = infResult.metaData->asRef<ImageMetaData>().img.size();
 
     for (size_t i = 0; i < maxProposalCount; i++) {
-        DetectedObject desc;
 
         float image_id = detections[i * objectSize + 0];
         if (image_id < 0) {
             break;
         }
 
-        desc.confidence = detections[i * objectSize + 2];
-        desc.labelID = static_cast<int>(detections[i * objectSize + 1]);
-        desc.label = getLabelName(desc.labelID);
-        desc.x = detections[i * objectSize + 3] * sz.width;
-        desc.y = detections[i * objectSize + 4] * sz.height;
-        desc.width = detections[i * objectSize + 5] * sz.width - desc.x;
-        desc.height = detections[i * objectSize + 6] * sz.height - desc.y;
+        float confidence = detections[i * objectSize + 2];
+        if (confidence > confidenceThreshold) {
+            DetectedObject desc;
 
-        if (desc.confidence > confidenceThreshold) {
+            desc.confidence = confidence;
+            desc.labelID = static_cast<int>(detections[i * objectSize + 1]);
+            desc.label = getLabelName(desc.labelID);
+            desc.x = detections[i * objectSize + 3] * sz.width;
+            desc.y = detections[i * objectSize + 4] * sz.height;
+            desc.width = detections[i * objectSize + 5] * sz.width - desc.x;
+            desc.height = detections[i * objectSize + 6] * sz.height - desc.y;
+
             /** Filtering out objects with confidence < confidence_threshold probability **/
             result->objects.push_back(desc);
         }
     }
 
-    return std::unique_ptr<ResultBase>(result);
+    return retVal;
 }
 
 void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
@@ -89,7 +94,7 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
                 inputsNames.push_back(inputInfoItem.first);
             }
             else {
-                inputsNames[1] = inputInfoItem.first;
+                inputsNames[0] = inputInfoItem.first;
             }
 
             inputInfoItem.second->setPrecision(Precision::U8);
@@ -106,7 +111,7 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
         }
         else if (inputInfoItem.second->getTensorDesc().getDims().size() == 2) {  // 2nd input contains image info
             inputsNames.resize(2);
-            inputsNames[2] = inputInfoItem.first;
+            inputsNames[1] = inputInfoItem.first;
             inputInfoItem.second->setPrecision(Precision::FP32);
         }
         else {
@@ -128,7 +133,7 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
 
     int num_classes = 0;
 
-/*    if (auto ngraphFunction = cnnNetwork.getFunction()) {
+    if (auto ngraphFunction = cnnNetwork.getFunction()) {
         for (const auto op : ngraphFunction->get_ops()) {
             if (op->get_friendly_name() == outputsNames[0]) {
                 auto detOutput = std::dynamic_pointer_cast<ngraph::op::DetectionOutput>(op);
@@ -144,7 +149,7 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
     }
     else {
         throw std::logic_error("This demo requires IR version no older than 10");
-    }*/
+    }
     if (labels.size()) {
         if (static_cast<int>(labels.size()) == (num_classes - 1)) {  // if network assumes default "background" class, having no label
             labels.insert(labels.begin(), "fake");
@@ -155,14 +160,17 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
     }
 
     const SizeVector outputDims = output->getTensorDesc().getDims();
+
+    if (outputDims.size() != 4) {
+        throw std::logic_error("Incorrect output dimensions for SSD");
+    }
+
     maxProposalCount = outputDims[2];
     objectSize = outputDims[3];
     if (objectSize != 7) {
         throw std::logic_error("Output should have 7 as a last dimension");
     }
-    if (outputDims.size() != 4) {
-        throw std::logic_error("Incorrect output dimensions for SSD");
-    }
+
     output->setPrecision(Precision::FP32);
     output->setLayout(Layout::NCHW);
 }

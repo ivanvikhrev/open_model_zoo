@@ -14,24 +14,12 @@
 // limitations under the License.
 */
 
-///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include <string>
-#include <gflags/gflags.h>
+#include <opencv2/core.hpp>
+#include "results.h"
 
-DECLARE_bool(h);
-DECLARE_string(i);
-DECLARE_string(m);
-DECLARE_string(d);
-DECLARE_bool(pc);
-DECLARE_string(c);
-DECLARE_string(l);
-DECLARE_bool(auto_resize);
-DECLARE_uint32(nireq);
-DECLARE_uint32(nthreads);
-DECLARE_string(nstreams);
-DECLARE_bool(loop_input);
-DECLARE_bool(no_show);
-DECLARE_string(u);
-DECLARE_string(mt)
+namespace DefaultRenderers {
+    cv::Mat renderDetectionData(const DetectionResult & result);
+    cv::Mat renderSegmentationData(const SegmentationResult& result);
+}

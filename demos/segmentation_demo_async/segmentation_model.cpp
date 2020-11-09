@@ -74,13 +74,13 @@ void SegmentationModel::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNet
     }
 }
 
-void SegmentationModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr & request, MetaData *& metaData)
+void SegmentationModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr & request, std::shared_ptr<MetaData>& metaData)
 {
-    auto imgData = inputData.asPtr<ImageInputData>();
-    auto& img = imgData->inputImage;
+    auto imgData = inputData.asRef<ImageInputData>();
+    auto& img = imgData.inputImage;
 
     request->SetBlob(inputsNames[0], wrapMat2Blob(img));
-    metaData = new ImageMetaData(img);
+    metaData = std::make_shared<ImageMetaData>(img);
 }
 
 std::unique_ptr<ResultBase> SegmentationModel::postprocess(InferenceResult& infResult) {
@@ -122,17 +122,4 @@ const cv::Vec3b& SegmentationModel::class2Color(int classId)
         colors.push_back(color);
     }
     return colors[classId];
-}
-
-cv::Mat SegmentationModel::renderData(ResultBase* result)
-{
-    auto segResult = result->asPtr<SegmentationResult>();
-    auto inputImg = segResult->metaData.get()->asPtr<ImageMetaData>()->img;
-
-    // Visualizing result data over source image
-    cv::Mat outputImg;
-    cv::resize(segResult->mask, outputImg, inputImg.size());
-    outputImg = inputImg / 2 + outputImg / 2;
-
-    return outputImg;
 }

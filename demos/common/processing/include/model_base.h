@@ -22,15 +22,14 @@
 class ModelBase
 {
 public:
-    ModelBase(std::string modelFileName) { this->modelFileName = modelFileName; }
+    ModelBase(const std::string& modelFileName) { this->modelFileName = modelFileName; }
     virtual ~ModelBase() {}
 
     virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork) = 0;
-    virtual void preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, MetaData*& metaData) = 0;
+    virtual void preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData) = 0;
     virtual std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) = 0;
     virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool) {
         this->execNetwork = execNetwork; }
-    virtual cv::Mat renderData(ResultBase* result) { return cv::Mat(); }
     const std::vector<std::string>& getOutputsNames() const { return outputsNames; }
     const std::vector<std::string>& getInputsNames() const { return inputsNames; }
 

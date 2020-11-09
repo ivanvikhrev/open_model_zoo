@@ -13,23 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
 #include "detection_model.h"
 #include <samples/args_helper.hpp>
 #include <samples/slog.hpp>
 
 using namespace InferenceEngine;
 
-DetectionModel::DetectionModel(std::string modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels)
-:ModelBase(modelFileName){
-    this->useAutoResize = useAutoResize;
-    this->confidenceThreshold = confidenceThreshold;
-    this->labels = labels;
+DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels)
+    :ModelBase(modelFileName),
+    useAutoResize(useAutoResize),
+    confidenceThreshold(confidenceThreshold),
+    labels(labels) {
 }
 
-void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, MetaData*& metaData)
+void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)
 {
-    auto imgData = inputData.asPtr<ImageInputData>();
-    auto& img = imgData->inputImage;
+    auto& img = inputData.asRef<ImageInputData>().inputImage;
 
     if (useAutoResize) {
         /* Just set input blob containing read image. Resize and layout conversionx will be done automatically */
@@ -41,6 +41,7 @@ void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::Inf
         matU8ToBlob<uint8_t>(img, frameBlob);
     }
 
+<<<<<<< HEAD:demos/object_detection_demo_ssd_async/detection_model.cpp
     metaData = new ImageMetaData(img);
 }
 
@@ -65,6 +66,9 @@ cv::Mat DetectionModel::renderData(ResultBase* result)
         }
     }
     return outputImg;
+=======
+    metaData = std::make_shared<ImageMetaData>(img);
+>>>>>>> object_detection_demo_ssd_async_common_pipeline:demos/object_detection_demo/detection_model.cpp
 }
 
 std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFilename){

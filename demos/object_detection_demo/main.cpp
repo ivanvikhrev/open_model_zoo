@@ -15,9 +15,9 @@
 */
 
 /**
-* \brief The entry point for the Inference Engine segmentation_demo_async demo application
-* \file segmentation_demo_async/main.cpp
-* \example segmentation_demo_async/main.cpp
+* \brief The entry point for the Inference Engine object_detection_demo_ssd_async demo application
+* \file object_detection_demo_ssd_async/main.cpp
+* \example object_detection_demo_ssd_async/main.cpp
 */
 
 #include <iostream>
@@ -30,13 +30,14 @@
 #include <samples/slog.hpp>
 #include <samples/images_capture.h>
 #include <samples/default_flags.hpp>
+#include <unordered_map>
 #include <gflags/gflags.h>
 
 #include <iostream>
-#include <unordered_map>
 
 #include "async_pipeline.h"
-#include "segmentation_model.h"
+#include "detection_model_yolo.h"
+#include "detection_model_ssd.h"
 #include "config_factory.h"
 #include "default_renderers.h"
 
@@ -46,11 +47,15 @@ static const char model_message[] = "Required. Path to an .xml file with a train
 static const char target_device_message[] = "Optional. Specify the target device to infer on (the list of available devices is shown below). "
 "Default value is CPU. Use \"-d HETERO:<comma-separated_devices_list>\" format to specify HETERO plugin. "
 "The demo will look for a suitable plugin for a specified device.";
+static const char labels_message[] = "Optional. Path to a file with labels mapping.";
 static const char performance_counter_message[] = "Optional. Enables per-layer performance report.";
 static const char custom_cldnn_message[] = "Required for GPU custom kernels. "
 "Absolute path to the .xml file with the kernel descriptions.";
 static const char custom_cpu_library_message[] = "Required for CPU custom layers. "
 "Absolute path to a shared library with the kernel implementations.";
+static const char thresh_output_message[] = "Optional. Probability threshold for detections.";
+static const char raw_output_message[] = "Optional. Inference results as raw values.";
+static const char input_resizable_message[] = "Optional. Enables resizable input with support of ROI crop & auto resize.";
 static const char num_inf_req_message[] = "Optional. Number of infer requests.";
 static const char num_threads_message[] = "Optional. Number of threads.";
 static const char num_streams_message[] = "Optional. Number of streams to use for inference on the CPU or/and GPU in "
@@ -58,20 +63,28 @@ static const char num_streams_message[] = "Optional. Number of streams to use fo
 "<device1>:<nstreams1>,<device2>:<nstreams2> or just <nstreams>)";
 static const char no_show_processed_video[] = "Optional. Do not show processed video.";
 static const char utilization_monitors_message[] = "Optional. List of monitors to show initially.";
+static const char iou_thresh_output_message[] = "Optional. Filtering intersection over union threshold for overlapping boxes (YOLOv3 only).";
+static const char mt_message[] = "Model type: ssd or yolo";
 
 DEFINE_bool(h, false, help_message);
 DEFINE_string(i, "", video_message);
 DEFINE_string(m, "", model_message);
 DEFINE_string(d, "CPU", target_device_message);
+DEFINE_string(labels, "", labels_message);
 DEFINE_bool(pc, false, performance_counter_message);
 DEFINE_string(c, "", custom_cldnn_message);
 DEFINE_string(l, "", custom_cpu_library_message);
+DEFINE_bool(r, false, raw_output_message);
+DEFINE_double(t, 0.5, thresh_output_message);
+DEFINE_double(iou_t, 0.4, iou_thresh_output_message);
+DEFINE_bool(auto_resize, false, input_resizable_message);
 DEFINE_uint32(nireq, 2, num_inf_req_message);
 DEFINE_uint32(nthreads, 0, num_threads_message);
 DEFINE_string(nstreams, "", num_streams_message);
 DEFINE_bool(loop, false, loop_message);
 DEFINE_bool(no_show, false, no_show_processed_video);
 DEFINE_string(u, "", utilization_monitors_message);
+DEFINE_string(mt, "", mt_message);
 
 /**
 * \brief This function shows a help message
@@ -88,13 +101,18 @@ static void showUsage() {
     std::cout << "          Or" << std::endl;
     std::cout << "      -c \"<absolute_path>\"    " << custom_cldnn_message << std::endl;
     std::cout << "    -d \"<device>\"             " << target_device_message << std::endl;
+    std::cout << "    -labels \"<path>\"          " << labels_message << std::endl;
     std::cout << "    -pc                       " << performance_counter_message << std::endl;
+    std::cout << "    -r                        " << raw_output_message << std::endl;
+    std::cout << "    -t                        " << thresh_output_message << std::endl;
+    std::cout << "    -auto_resize              " << input_resizable_message << std::endl;
     std::cout << "    -nireq \"<integer>\"        " << num_inf_req_message << std::endl;
     std::cout << "    -nthreads \"<integer>\"     " << num_threads_message << std::endl;
     std::cout << "    -nstreams                 " << num_streams_message << std::endl;
     std::cout << "    -loop                     " << loop_message << std::endl;
     std::cout << "    -no_show                  " << no_show_processed_video << std::endl;
     std::cout << "    -u                        " << utilization_monitors_message << std::endl;
+    std::cout << "    -mt                       " << mt_message << std::endl;
 }
 
 
@@ -125,22 +143,25 @@ void paintInfo(cv::Mat& frame, const PipelineBase::PerformanceInfo& info) {
     out.str("");
     out << "FPS:" << std::fixed << std::setprecision(0) << std::setw(3) << info.movingAverageFPS
         << " (" << std::setprecision(1) << info.FPS << ")";
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(10, 200, 10), 2);
+    putHighlightedText(frame, out.str(), cv::Point2f(10, 22), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(10, 200, 10), 2);
 
     out.str("");
     out << "Avg Latency:" << std::fixed << std::setprecision(0) << std::setw(4) << info.movingAverageLatencyMs
         << " (" << std::setprecision(1) << info.getTotalAverageLatencyMs() << ") ms";
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 60), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(200, 10, 10), 2);
+    putHighlightedText(frame, out.str(), cv::Point2f(10, 44), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(200, 10, 10), 2);
+
+    out.str("");
+    out << "Inference Latency:" << std::fixed << std::setprecision(0) << std::setw(4) << info.getLastInferenceLatencyMs() << " ms";
+    putHighlightedText(frame, out.str(), cv::Point2f(10, 66), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(200, 10, 10), 2);
 
     out.str("");
     out << "Pool: " << std::fixed << std::setprecision(1) <<
         info.numRequestsInUse << "/" << FLAGS_nireq;
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 90), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(200, 10, 10), 2);
+    putHighlightedText(frame, out.str(), cv::Point2f(10, 88), cv::FONT_HERSHEY_TRIPLEX, 0.6, cv::Scalar(200, 10, 10), 2);
 }
 
 int main(int argc, char *argv[]) {
     try {
-        /** This demo covers certain topology and cannot be generalized for any object detection **/
         slog::info << "InferenceEngine: " << printable(*InferenceEngine::GetInferenceEngineVersion()) << slog::endl;
 
         // ------------------------------ Parsing and validation of input args ---------------------------------
@@ -153,10 +174,29 @@ int main(int argc, char *argv[]) {
         auto cap = openImagesCapture(FLAGS_i, FLAGS_loop);
         cv::Mat curr_frame;
 
-        //------------------------------ Running Segmentation routines ----------------------------------------------
+        //------------------------------ Running Detection routines ----------------------------------------------
+        std::vector<std::string> labels;
+        if (!FLAGS_labels.empty())
+            labels = DetectionModel::loadLabels(FLAGS_labels);
+
+        std::unique_ptr<ModelBase> model;
+        if (FLAGS_mt=="ssd")
+        {
+            model.reset(new ModelSSD(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, labels));
+        }
+        else if (FLAGS_mt=="yolo")
+        {
+            model.reset(new ModelYolo3(FLAGS_m,(float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels));
+        }
+        else
+        {
+            slog::err << "No model type or invalid model type (-mt) provided: " + FLAGS_mt << slog::endl;
+            return -1;
+        }
+
         InferenceEngine::Core core;
-        PipelineBase pipeline(std::make_unique<SegmentationModel>(FLAGS_m),
-            ConfigFactory::getUserConfig(FLAGS_d,FLAGS_l,FLAGS_c,FLAGS_pc,FLAGS_nireq,FLAGS_nstreams,FLAGS_nthreads),
+        PipelineBase pipeline(std::move(model),
+            ConfigFactory::getUserConfig(FLAGS_d, FLAGS_l, FLAGS_c, FLAGS_pc, FLAGS_nireq, FLAGS_nstreams, FLAGS_nthreads),
             core);
         Presenter presenter;
 
@@ -176,7 +216,6 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-
                 frameNum = pipeline.submitImage(curr_frame);
             }
 
@@ -186,17 +225,18 @@ int main(int argc, char *argv[]) {
             int key = 0;
 
             //--- Checking for results and rendering data if it's ready
-            //--- If you need just plain data without rendering - cast result's underlying pointer to SegmentationResult*
-            //    and use your own processing instead of calling renderSegmentationData().
+            //--- If you need just plain data without rendering - cast result's underlying pointer to DetectionResult*
+            //    and use your own processing instead of calling renderDetectionData().
             std::unique_ptr<ResultBase> result;
             while (result = pipeline.getResult()) {
-                cv::Mat outFrame = DefaultRenderers::renderSegmentationData(result->asRef<SegmentationResult>());
+                cv::Mat outFrame = DefaultRenderers::renderDetectionData(result->asRef<DetectionResult>());
                 //--- Showing results and device information
                 if (!outFrame.empty()) {
                     presenter.drawGraphs(outFrame);
                     paintInfo(outFrame, pipeline.getPerformanceInfo());
-                    if (!FLAGS_no_show) {
-                        cv::imshow("Segmentation Results", outFrame);
+                    if (!FLAGS_no_show)
+                    {
+                        cv::imshow("Detection Results", outFrame);
 
                         // Showing frame in window and storing key pressed if key variable doesn't contain key code yet
                         if (key) {
@@ -224,9 +264,9 @@ int main(int argc, char *argv[]) {
         auto info = pipeline.getPerformanceInfo();
         slog::info << slog::endl << "Metric reports:" << slog::endl;
 
-        //--- Show performace results 
         slog::info << "Avg Latency: " << std::fixed << std::setprecision(1) <<
-            info.getTotalAverageLatencyMs() << " ms" << slog::endl;
+            info.getTotalAverageLatencyMs()
+            << " ms" << slog::endl;
 
         slog::info << "FPS: " << std::fixed << std::setprecision(1) << info.FPS << slog::endl;
 

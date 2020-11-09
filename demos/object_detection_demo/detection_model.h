@@ -29,11 +29,9 @@ public:
     /// Otherwise, image will be preprocessed and resized using OpenCV routines.
     /// @param labels - array of labels for every class. If this array is empty or contains less elements
     /// than actual classes number, default "Label #N" will be shown for missing items.
-    DetectionModel(std::string modelFileName, float coskypenfidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels);
+    DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels);
 
-    virtual void preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, MetaData*& metaData);
-    
-    cv::Mat renderData(ResultBase* result);
+    virtual void preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData) override;
 
     static std::vector<std::string> loadLabels(const std::string& labelFilename);
 
