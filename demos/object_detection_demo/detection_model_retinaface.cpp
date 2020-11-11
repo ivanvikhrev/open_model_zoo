@@ -89,7 +89,7 @@ void ModelRetinaFace::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetw
 
         size_t num = output.second->getDims()[2];
         size_t i = 0;
-        for (; i < outputsSizes[type].size(); i++)
+        for (; i < outputsSizes[type].size(); ++i)
         {
             if (num < outputsSizes[type][i])
             {
@@ -165,7 +165,7 @@ void ModelRetinaFace::generate_anchors_fpn()
 
 std::vector<int> nms(const std::vector<ModelRetinaFace::Anchor>& boxes, const std::vector<double>& scores, double thresh) {
     std::vector<double> areas(boxes.size());
-    for (int i = 0; i < boxes.size(); i++)
+    for (int i = 0; i < boxes.size(); ++i)
     {
         areas[i] = (boxes[i].right - boxes[i].left) * (boxes[i].bottom - boxes[i].top);
     }
@@ -174,11 +174,11 @@ std::vector<int> nms(const std::vector<ModelRetinaFace::Anchor>& boxes, const st
     std::sort(order.begin(), order.end(), [&scores](int o1, int o2) { return scores[o1] > scores[o2]; });
 
     int ordersNum = 0;
-    for (; scores[order[ordersNum]] >= 0; ordersNum++);
+    for (; scores[order[ordersNum]] >= 0; ++ordersNum);
 
     std::vector<int> keep;
     bool shouldContinue = true;
-    for(int i=0;shouldContinue && i<ordersNum;i++)
+    for(int i=0;shouldContinue && i<ordersNum; ++i)
     {
         auto idx1 = order[i];
         if (idx1 >= 0) // ?
@@ -186,7 +186,7 @@ std::vector<int> nms(const std::vector<ModelRetinaFace::Anchor>& boxes, const st
             keep.push_back(idx1);
             shouldContinue = false;
 
-            for (int j = i + 1; j < ordersNum; j++)
+            for (int j = i + 1; j < ordersNum; ++j)
             {
                 //if (j == i) continue;
                 auto idx2 = order[j];
@@ -251,9 +251,9 @@ std::vector<double> _get_scores(InferenceEngine::MemoryBlob::Ptr rawData, int an
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
 
-    for (size_t x = anchor_num; x < sz[1]; x++) {
-        for (size_t y = 0; y < sz[2]; y++) {
-            for (size_t z = 0; z < sz[3]; z++) {
+    for (size_t x = anchor_num; x < sz[1]; ++x) {
+        for (size_t y = 0; y < sz[2]; ++y) {
+            for (size_t z = 0; z < sz[3]; ++z) {
                 retVal[(y*sz[3] + z)*restAnchors + (x - anchor_num)] = memPtr[ (x*sz[2]+y)*sz[3]+z];
             }
         }
@@ -271,9 +271,9 @@ std::vector<double> _get_mask_scores(InferenceEngine::MemoryBlob::Ptr rawData, i
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
 
-    for (size_t x = anchor_num*2; x < sz[1]; x++) {
-        for (size_t y = 0; y < sz[2]; y++) {
-            for (size_t z = 0; z < sz[3]; z++) {
+    for (size_t x = anchor_num*2; x < sz[1]; ++x) {
+        for (size_t y = 0; y < sz[2]; ++y) {
+            for (size_t z = 0; z < sz[3]; ++z) {
                 retVal[(y*sz[3] + z)*restAnchors + (x - anchor_num*2)] = memPtr[(x*sz[2] + y)*sz[3] + z];
             }
         }
@@ -293,17 +293,17 @@ std::vector<std::vector<cv::Point2f>> _get_landmarks(InferenceEngine::MemoryBlob
     auto stride = landmark_pred_len * sz[2] * sz[3];
     std::vector<std::vector<cv::Point2f>> retVal(anchors.size());
 
-    for (int i = 0; i < anchors.size(); i++) {
+    for (int i = 0; i < anchors.size(); ++i) {
         auto ctrX = anchors[i].getXCenter();
         auto ctrY = anchors[i].getYCenter();
         auto blockWidth = sz[2]*sz[3];
         retVal[i].reserve(ModelRetinaFace::LANDMARKS_NUM);
-        for (int j = 0; j < ModelRetinaFace::LANDMARKS_NUM; j++) {
+        for (int j = 0; j < ModelRetinaFace::LANDMARKS_NUM; ++j) {
             auto deltaX = (i % 2 ? memPtr[stride + i / 2 + j * 2 * blockWidth] : memPtr[i / 2 + j * 2 * blockWidth])* landmark_std;
             auto deltaY = (i % 2 ? memPtr[stride + i / 2 + (j * 2 + 1)*blockWidth] : memPtr[i / 2 + (j * 2 + 1)*blockWidth]) *  landmark_std;
 
-            retVal[i][j] = cv::Point2f( {static_cast<float>(deltaX * anchors[i].getWidth() + anchors[i].getXCenter()),
-                                         static_cast<float>(deltaY * anchors[i].getHeight() + anchors[i].getYCenter())} );
+            retVal[i].push_back({static_cast<float>(deltaX * anchors[i].getWidth() + anchors[i].getXCenter()),
+                                         static_cast<float>(deltaY * anchors[i].getHeight() + anchors[i].getYCenter())});
         }
     }
     return retVal;
@@ -331,7 +331,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
     std::vector<std::vector<cv::Point2f>> landmarks_list;
     std::vector<double> mask_scores_list;
 
-    for (int idx = 0; idx < anchorCfg.size(); idx++) {
+    for (int idx = 0; idx < anchorCfg.size(); ++idx) {
         auto s = anchorCfg[idx].stride;
         auto anchors_fpn = _anchors_fpn[s];
         auto anchor_num = anchors_fpn.size();
@@ -343,11 +343,11 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
 
         //--- Creating strided anchors plane
         std::vector<Anchor> anchors(height*width*anchor_num);
-        for (int iw = 0; iw < width; iw++) {
+        for (int iw = 0; iw < width; ++iw) {
             auto sw = iw * s;
-            for (int ih = 0; ih < height; ih++) {
+            for (int ih = 0; ih < height; ++ih) {
                 auto sh = ih * s;
-                for (int k = 0; k < anchor_num; k++) {
+                for (int k = 0; k < anchor_num; ++k) {
                     Anchor& anc = anchors[(ih*width + iw)*anchor_num + k];
                     anc.left = anchors_fpn[k].left + sw;
                     anc.top = anchors_fpn[k].top + sh;
@@ -393,7 +393,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
     double scale_x = ((double)netInputWidth) / sz.width;
     double scale_y = ((double)netInputHeight) / sz.height;
 
-    for (int i = 0; i < scores_list.size(); i++) {
+    for (int i = 0; i < scores_list.size(); ++i) {
         DetectedObject desc;
         desc.confidence = (float)scores_list[i];
         desc.x = (float)(proposals_list[i].left / scale_x);
