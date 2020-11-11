@@ -16,9 +16,8 @@
 
 #include "requests_pool.h"
 
-RequestsPool::RequestsPool(InferenceEngine::ExecutableNetwork & execNetwork, unsigned int size) :
-    numRequestsInUse(0)
-{
+RequestsPool::RequestsPool(InferenceEngine::ExecutableNetwork& execNetwork, unsigned int size) :
+    numRequestsInUse(0) {
     for (unsigned int infReqId = 0; infReqId < size; ++infReqId) {
         requests.emplace(execNetwork.CreateInferRequestPtr(), false);
     }
@@ -28,13 +27,11 @@ InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest()
 {
     std::lock_guard<std::mutex> lock(mtx);
 
-    const auto& it = std::find_if(requests.begin(), requests.end(), [](std::pair<const InferenceEngine::InferRequest::Ptr, bool>& x) {return !x.second; });
-    if (it == requests.end())
-    {
+    const auto& it = std::find_if(requests.begin(), requests.end(),
+        [](std::pair<const InferenceEngine::InferRequest::Ptr, bool>& x) { return !x.second; });
+    if (it == requests.end()) {
         return InferenceEngine::InferRequest::Ptr();
-    }
-    else
-    {
+    } else {
         it->second = true;
         numRequestsInUse++;
         return it->first;
@@ -44,17 +41,15 @@ InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest()
 void RequestsPool::setRequestIdle(const InferenceEngine::InferRequest::Ptr & request) {
     std::lock_guard<std::mutex> lock(mtx);
     this->requests.at(request) = false;
-    numRequestsInUse--;
+    --numRequestsInUse;
 }
 
-size_t RequestsPool::getInUseRequestsCount()
-{
+size_t RequestsPool::getInUseRequestsCount() {
     std::lock_guard<std::mutex> lock(mtx);
     return numRequestsInUse;
 }
 
-bool RequestsPool::isIdleRequestAvailable()
-{
+bool RequestsPool::isIdleRequestAvailable() {
     std::lock_guard<std::mutex> lock(mtx);
     return numRequestsInUse < requests.size();
 }
@@ -70,8 +65,7 @@ void RequestsPool::waitForTotalCompletion() {
     }
 }
 
-std::vector<InferenceEngine::InferRequest::Ptr> RequestsPool::getInferRequestsList()
-{
+std::vector<InferenceEngine::InferRequest::Ptr> RequestsPool::getInferRequestsList() {
     std::lock_guard<std::mutex> lock(mtx);
     std::vector<InferenceEngine::InferRequest::Ptr> retVal;
     retVal.reserve(requests.size());

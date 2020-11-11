@@ -20,14 +20,14 @@
 using namespace InferenceEngine;
 
 ModelYolo3::ModelYolo3(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize,
-    float boxIOUThreshold, const std::vector<std::string>& labels)
-    :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels),
-    boxIOUThreshold(boxIOUThreshold){
+    float boxIOUThreshold, const std::vector<std::string>& labels) :
+    DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels),
+    boxIOUThreshold(boxIOUThreshold) {
 }
 
 void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
-    // --------------------------- Configure input & output ---------------------------------------------
-    // --------------------------- Prepare input blobs -----------------------------------------------------
+    // --------------------------- Configure input & output -------------------------------------------------
+    // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
     InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
     if (inputInfo.size() != 1) {
@@ -40,8 +40,7 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
     if (useAutoResize) {
         input->getPreProcess().setResizeAlgorithm(ResizeAlgorithm::RESIZE_BILINEAR);
         input->getInputData()->setLayout(Layout::NHWC);
-    }
-    else {
+    } else {
         input->getInputData()->setLayout(Layout::NCHW);
     }
 
@@ -72,20 +71,17 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
                 regions.emplace(outputLayer->first, Region(regionYolo));;
             }
         }
-    }
-    else {
+    } else {
         throw std::runtime_error("Can't get ngraph::Function. Make sure the provided model is in IR version 10 or greater.");
     }
 
-    if (!(this->labels).empty() &&
-        static_cast<int>(labels.size()) != regions.begin()->second.classes) {
+    if (!(this->labels).empty() && static_cast<int>(labels.size()) != regions.begin()->second.classes) {
         throw std::runtime_error(std::string("The number of labels (") + std::to_string(labels.size()) +
             ") is different from numbers of model classes (" + std::to_string(regions.begin()->second.classes) + ")");
     }
 }
 
-std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult & infResult)
-{
+std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult& infResult) {
     DetectionResult* result = new DetectionResult;
 
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
@@ -104,8 +100,7 @@ std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult & infResult)
     for (const auto& obj1 : objects) {
         bool isGoodResult = true;
         for (const auto& obj2 : objects) {
-            if (obj1.confidence < obj2.confidence && intersectionOverUnion(obj1, obj2) >= boxIOUThreshold) // if obj1 is the same as obj2, condition expression will evaluate to false anyway
-            {
+            if (obj1.confidence < obj2.confidence && intersectionOverUnion(obj1, obj2) >= boxIOUThreshold) {  // if obj1 is the same as obj2, condition expression will evaluate to false anyway
                 isGoodResult = false;
                 break;
             }
@@ -133,7 +128,7 @@ void ModelYolo3::parseYOLOV3Output(const std::string& output_name,
 
     // --------------------------- Extracting layer parameters -------------------------------------
     auto it = regions.find(output_name);
-    if(it==regions.end()){
+    if(it == regions.end()) {
         throw std::runtime_error(std::string("Can't find output layer with name ") + output_name);
     }
     auto& region = it->second;
@@ -189,9 +184,7 @@ int ModelYolo3::calculateEntryIndex(int side, int lcoords, int lclasses, int loc
     return n * side * side * (lcoords + lclasses + 1) + entry * side * side + loc;
 }
 
-double ModelYolo3::intersectionOverUnion(
-    const DetectedObject& o1, const DetectedObject& o2) {
-
+double ModelYolo3::intersectionOverUnion(const DetectedObject& o1, const DetectedObject& o2) {
     double overlappingWidth = fmin(o1.x+o1.width, o2.x+o2.width) - fmax(o1.x, o2.x);
     double overlappingHeight = fmin(o1.y + o1.height, o2.y + o2.height) - fmax(o1.y, o2.y);
     double intersectionArea = (overlappingWidth < 0 || overlappingHeight < 0) ? 0 : overlappingHeight * overlappingWidth;
@@ -199,8 +192,7 @@ double ModelYolo3::intersectionOverUnion(
     return intersectionArea / unionArea;
 }
 
-ModelYolo3::Region::Region(const std::shared_ptr<ngraph::op::RegionYolo>& regionYolo)
-{
+ModelYolo3::Region::Region(const std::shared_ptr<ngraph::op::RegionYolo>& regionYolo) {
     coords = regionYolo->get_num_coords();
     classes = regionYolo->get_num_classes();
     auto mask = regionYolo->get_mask();

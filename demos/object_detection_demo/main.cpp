@@ -157,16 +157,11 @@ int main(int argc, char *argv[]) {
             labels = DetectionModel::loadLabels(FLAGS_labels);
 
         std::unique_ptr<ModelBase> model;
-        if (FLAGS_mt=="ssd")
-        {
+        if (FLAGS_mt == "ssd") {
             model.reset(new ModelSSD(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, labels));
-        }
-        else if (FLAGS_mt=="yolo")
-        {
+        } else if (FLAGS_mt == "yolo") {
             model.reset(new ModelYolo3(FLAGS_m,(float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels));
-        }
-        else
-        {
+        } else {
             slog::err << "No model type or invalid model type (-mt) provided: " + FLAGS_mt << slog::endl;
             return -1;
         }
@@ -179,7 +174,7 @@ int main(int argc, char *argv[]) {
 
         auto startTimePoint = std::chrono::steady_clock::now();
         bool keepRunning = true;
-        while (keepRunning){
+        while (keepRunning) {
             int64_t frameNum;
             if (pipeline.isReadyToProcess()) {
                 //--- Capturing frame. If previous frame hasn't been inferred yet, reuse it instead of capturing new one
@@ -187,8 +182,7 @@ int main(int argc, char *argv[]) {
                 if (curr_frame.empty()) {
                     if (!frameNum) {
                         throw std::logic_error("Can't read an image from the input");
-                    }
-                    else {
+                    } else {
                         // Input stream is over
                         break;
                     }
@@ -210,16 +204,13 @@ int main(int argc, char *argv[]) {
                 if (!outFrame.empty()) {
                     presenter.drawGraphs(outFrame);
                     pipeline.getMetrics().paintMetrics(outFrame, { 10,22 }, 0.6);
-                    if (!FLAGS_no_show)
-                    {
+                    if (!FLAGS_no_show) {
                         cv::imshow("Detection Results", outFrame);
-
                         //--- Processing keyboard events
                         auto key = cv::waitKey(1);
                         if (27 == key || 'q' == key || 'Q' == key) {  // Esc
                             keepRunning = false;
-                        }
-                        else {
+                        } else {
                             presenter.handleKey(key);
                         }
                     }
@@ -232,12 +223,10 @@ int main(int argc, char *argv[]) {
         pipeline.getMetrics().printTotal();
 
         slog::info << presenter.reportMeans() << slog::endl;
-    }
-    catch (const std::exception& error) {
+    } catch (const std::exception& error) {
         slog::err << "[ ERROR ] " << error.what() << slog::endl;
         return 1;
-    }
-    catch (...) {
+    } catch (...) {
         slog::err << "[ ERROR ] Unknown/internal exception happened." << slog::endl;
         return 1;
     }

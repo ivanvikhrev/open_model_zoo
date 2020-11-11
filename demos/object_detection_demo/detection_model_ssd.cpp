@@ -22,17 +22,16 @@ using namespace InferenceEngine;
 
 ModelSSD::ModelSSD(const std::string& modelFileName,
     float confidenceThreshold, bool useAutoResize,
-    const std::vector<std::string>& labels)
-    :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels) {
+    const std::vector<std::string>& labels) :
+    DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels) {
 }
 
-void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool)
-{
+void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool) {
     DetectionModel::onLoadCompleted(execNetwork, requestsPool);
 
-    // --- Setting image info for every request in a pool. We can do it once and reuse this info at every submit -------
-    if (inputsNames.size()>1) {
-        for (auto &request : requestsPool->getInferRequestsList()) {
+    // --- Setting image info for every request in a pool. We can do it once and reuse this info at every submit ------
+    if (inputsNames.size() > 1) {
+        for (auto& request : requestsPool->getInferRequestsList()) {
             auto blob = request->GetBlob(inputsNames[1]);
             LockedMemory<void> blobMapped = as<MemoryBlob>(blob)->wmap();
             auto data = blobMapped.as<float *>();
@@ -43,8 +42,7 @@ void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, 
     }
 }
 
-std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
-{
+std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult) {
     LockedMemory<const void> outputMapped = infResult.getFirstOutputBlob()->rmap();
     const float *detections = outputMapped.as<float*>();
 
@@ -55,8 +53,7 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
 
     auto sz = infResult.metaData->asRef<ImageMetaData>().img.size();
 
-    for (size_t i = 0; i < maxProposalCount; i++) {
-
+    for (size_t i = 0; i < maxProposalCount; ++i) {
         float image_id = detections[i * objectSize + 0];
         if (image_id < 0) {
             break;
@@ -82,18 +79,17 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
     return retVal;
 }
 
-void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
-    // --------------------------- Configure input & output ---------------------------------------------
-    // --------------------------- Prepare input blobs -----------------------------------------------------
+void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
+    // --------------------------- Configure input & output -------------------------------------------------
+    // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
     InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
 
-    for (const auto & inputInfoItem : inputInfo) {
+    for (const auto& inputInfoItem : inputInfo) {
         if (inputInfoItem.second->getTensorDesc().getDims().size() == 4) {  // 1st input contains images
             if (inputsNames.empty()) {
                 inputsNames.push_back(inputInfoItem.first);
-            }
-            else {
+            } else {
                 inputsNames[0] = inputInfoItem.first;
             }
 
@@ -101,20 +97,17 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
             if (useAutoResize) {
                 inputInfoItem.second->getPreProcess().setResizeAlgorithm(ResizeAlgorithm::RESIZE_BILINEAR);
                 inputInfoItem.second->getInputData()->setLayout(Layout::NHWC);
-            }
-            else {
+            } else {
                 inputInfoItem.second->getInputData()->setLayout(Layout::NCHW);
             }
             const TensorDesc& inputDesc = inputInfoItem.second->getTensorDesc();
             netInputHeight = getTensorHeight(inputDesc);
             netInputWidth = getTensorWidth(inputDesc);
-        }
-        else if (inputInfoItem.second->getTensorDesc().getDims().size() == 2) {  // 2nd input contains image info
+        } else if (inputInfoItem.second->getTensorDesc().getDims().size() == 2) {  // 2nd input contains image info
             inputsNames.resize(2);
             inputsNames[1] = inputInfoItem.first;
             inputInfoItem.second->setPrecision(Precision::FP32);
-        }
-        else {
+        } else {
             throw std::logic_error("Unsupported " +
                 std::to_string(inputInfoItem.second->getTensorDesc().getDims().size()) + "D "
                 "input layer '" + inputInfoItem.first + "'. "
@@ -146,15 +139,14 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
                 break;
             }
         }
-    }
-    else {
+    } else {
         throw std::logic_error("This demo requires IR version no older than 10");
     }
+
     if (labels.size()) {
         if (static_cast<int>(labels.size()) == (num_classes - 1)) {  // if network assumes default "background" class, having no label
             labels.insert(labels.begin(), "fake");
-        }
-        else if (static_cast<int>(labels.size()) != num_classes) {
+        } else if (static_cast<int>(labels.size()) != num_classes) {
             throw std::logic_error("The number of labels is different from numbers of model classes");
         }
     }

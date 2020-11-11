@@ -35,7 +35,7 @@ struct ImageMetaData : public MetaData {
     ImageMetaData() {
     }
 
-    ImageMetaData(cv::Mat img){
+    ImageMetaData(cv::Mat img) {
         this->img = img;
     }
 };

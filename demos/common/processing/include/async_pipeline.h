@@ -27,8 +27,7 @@
 
 /// This is base class for asynchronous pipeline
 /// Derived classes should add functions for data submission and output processing
-class AsyncPipeline
-{
+class AsyncPipeline {
 public:
     /// Loads model and performs required initialization
     /// @param modelInstance pointer to model object. Object it points to should not be destroyed manually after passing pointer to this function.
@@ -72,7 +71,7 @@ protected:
     /// @param metaData - additional source data. This is optional transparent data not used in inference process directly.
     /// It is passed to inference result directly and can be used in postprocessing.
     /// @returns unique sequential frame ID for this particular request. Same frame ID will be written in the responce structure.
-    virtual int64_t submitRequest(const InferenceEngine::InferRequest::Ptr& request,const std::shared_ptr<MetaData>& metaData);
+    virtual int64_t submitRequest(const InferenceEngine::InferRequest::Ptr& request, const std::shared_ptr<MetaData>& metaData);
 
     /// Returns processed result, if available
     /// Function will treat results as ready only if next sequential result (frame) is ready.
@@ -90,8 +89,8 @@ protected:
     std::mutex mtx;
     std::condition_variable condVar;
 
-    int64_t inputFrameId=0;
-    int64_t outputFrameId=0;
+    int64_t inputFrameId = 0;
+    int64_t outputFrameId = 0;
 
     std::exception_ptr callbackException = nullptr;
 

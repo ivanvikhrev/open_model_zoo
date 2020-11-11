@@ -62,7 +62,6 @@ struct DetectionResult : public ResultBase {
     std::vector<DetectedObject> objects;
 };
 
-struct SegmentationResult : public ResultBase
-{
+struct SegmentationResult : public ResultBase {
     cv::Mat mask;
 };

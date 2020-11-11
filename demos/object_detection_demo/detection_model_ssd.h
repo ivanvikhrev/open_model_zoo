@@ -17,8 +17,8 @@
 #pragma once
 #include "detection_model.h"
 class ModelSSD :
-    public DetectionModel
-{
+    public DetectionModel {
+
 public:
     /// Constructor
     /// @param modelFileName name of model to load
@@ -33,10 +33,10 @@ public:
         const std::vector<std::string>& labels = std::vector<std::string>());
 
     virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool) override;
-    virtual std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult) override;
+    virtual std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) override;
 
 protected:
-    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork) override;
+    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) override;
     size_t maxProposalCount = 0;
     size_t objectSize = 0;
 };

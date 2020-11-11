@@ -20,22 +20,20 @@
 
 using namespace InferenceEngine;
 
-DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels)
-    :ModelBase(modelFileName),
+DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels) :
+    ModelBase(modelFileName),
     labels(labels),
     useAutoResize(useAutoResize),
     confidenceThreshold(confidenceThreshold) {
 }
 
-void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)
-{
+void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData) {
     auto& img = inputData.asRef<ImageInputData>().inputImage;
 
     if (useAutoResize) {
         /* Just set input blob containing read image. Resize and layout conversionx will be done automatically */
         request->SetBlob(inputsNames[0], wrapMat2Blob(img));
-    }
-    else {
+    } else {
         /* Resize and copy data from the image to the input blob */
         Blob::Ptr frameBlob = request->GetBlob(inputsNames[0]);
         matU8ToBlob<uint8_t>(img, frameBlob);
@@ -44,8 +42,9 @@ void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::Inf
     metaData = std::make_shared<ImageMetaData>(img);
 }
 
-std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFilename){
+std::vector<std::string> DetectionModel::loadLabels(const std::string& labelFilename) {
     std::vector<std::string> labelsList;
+
     /** Read labels (if any)**/
     if (!labelFilename.empty()) {
         std::ifstream inputFile(labelFilename);
@@ -56,5 +55,6 @@ std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFil
         if (labelsList.empty())
             throw std::logic_error("File empty or not found: " + labelFilename);
     }
+
     return labelsList;
 }
