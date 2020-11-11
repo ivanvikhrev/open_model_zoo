@@ -23,51 +23,20 @@
 #include "requests_pool.h"
 #include "results.h"
 #include "model_base.h"
+#include "samples/performance_metrics.hpp"
 
 /// This is base class for asynchronous pipeline
 /// Derived classes should add functions for data submission and output processing
-class PipelineBase
+class AsyncPipeline
 {
-public:
-    static constexpr int MOVING_AVERAGE_SAMPLES = 5;
-
-    struct PerformanceInfo
-    {
-        int64_t framesCount = 0;
-        std::chrono::steady_clock::duration latencySum = std::chrono::steady_clock::duration::zero();
-        std::chrono::steady_clock::duration lastInferenceLatency = std::chrono::steady_clock::duration::zero();
-        std::chrono::steady_clock::time_point startTime;
-        double movingAverageLatencyMs;
-        uint32_t numRequestsInUse;
-        double movingAverageFPS;
-        double FPS=0;
-
-        double getTotalAverageLatencyMs() const {
-            return ((double)std::chrono::duration_cast<std::chrono::milliseconds>(latencySum).count()) / framesCount;
-        }
-
-        double getLastInferenceLatencyMs() const {
-            return ((double)std::chrono::duration_cast<std::chrono::milliseconds>(lastInferenceLatency).count());
-        }
-
-    };
-
-    struct PerformanceInternalCounters
-    {
-        long long latenciesMs[MOVING_AVERAGE_SAMPLES] = {};
-        std::chrono::steady_clock::time_point retrievalTimestamps[MOVING_AVERAGE_SAMPLES] = {};
-        long long movingLatenciesSumMs = 0;
-        int currentIndex = 0;
-    };
-
 public:
     /// Loads model and performs required initialization
     /// @param modelInstance pointer to model object. Object it points to should not be destroyed manually after passing pointer to this function.
     /// @param cnnConfig - fine tuning configuration for CNN model
     /// @param engine - reference to InferenceEngine::Core instance to use.
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
-    PipelineBase(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine);
-    virtual ~PipelineBase();
+    AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine);
+    virtual ~AsyncPipeline();
 
     /// Waits until either output data becomes available or pipeline allows to submit more input data.
     /// Function will treat results as ready only if next sequential result (frame) is ready.
@@ -79,13 +48,13 @@ public:
     /// and next frame can be submitted for processing, false otherwise.
     bool isReadyToProcess() { return requestsPool->isIdleRequestAvailable(); }
 
-    /// Returns performance info
-    /// @returns performance information structure
-    PerformanceInfo getPerformanceInfo() { std::lock_guard<std::mutex> lock(mtx); return perfInfo; }
+    /// Returns performance metrics
+    /// @returns performance metrics structure
+    const PerformanceMetrics getMetrics() const { return perfMetrics; }
 
     /// Waits for all currently submitted requests to be completed.
     ///
-    void waitForTotalCompletion() { if(requestsPool.get())requestsPool->waitForTotalCompletion(); }
+    void waitForTotalCompletion() { if (requestsPool) requestsPool->waitForTotalCompletion(); }
 
     /// Submit request to network
     /// @param image - image to submit for processing
@@ -93,7 +62,7 @@ public:
     /// Otherwise returns unique sequential frame ID for this particular request. Same frame ID will be written in the response structure.
     virtual int64_t submitImage(cv::Mat img);
 
-    /// Gets available data from the queue 
+    /// Gets available data from the queue
     /// Function will treat results as ready only if next sequential result (frame) is ready.
     virtual std::unique_ptr<ResultBase> getResult();
 
@@ -116,8 +85,7 @@ protected:
 
     InferenceEngine::ExecutableNetwork execNetwork;
 
-    PerformanceInfo perfInfo;
-    PerformanceInternalCounters perfInternals;
+    PerformanceMetrics perfMetrics;
 
     std::mutex mtx;
     std::condition_variable condVar;

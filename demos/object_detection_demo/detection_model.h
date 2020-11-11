@@ -41,9 +41,8 @@ protected:
     size_t netInputHeight = 0;
     size_t netInputWidth = 0;
 
-    bool useAutoResize=false;
-    float confidenceThreshold=0;
+    bool useAutoResize;
+    float confidenceThreshold;
 
     std::string getLabelName(int labelID) { return (size_t)labelID < labels.size() ? labels[labelID] : std::string("Label #") + std::to_string(labelID); }
 };
-
