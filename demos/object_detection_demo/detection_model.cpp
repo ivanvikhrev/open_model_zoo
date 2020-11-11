@@ -22,9 +22,9 @@ using namespace InferenceEngine;
 
 DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels)
     :ModelBase(modelFileName),
+    labels(labels),
     useAutoResize(useAutoResize),
-    confidenceThreshold(confidenceThreshold),
-    labels(labels) {
+    confidenceThreshold(confidenceThreshold) {
 }
 
 void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)

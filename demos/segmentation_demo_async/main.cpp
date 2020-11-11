@@ -119,25 +119,6 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     return true;
 }
 
-void paintInfo(cv::Mat& frame, const PipelineBase::PerformanceInfo& info) {
-    std::ostringstream out;
-
-    out.str("");
-    out << "FPS:" << std::fixed << std::setprecision(0) << std::setw(3) << info.movingAverageFPS
-        << " (" << std::setprecision(1) << info.FPS << ")";
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 30), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(10, 200, 10), 2);
-
-    out.str("");
-    out << "Avg Latency:" << std::fixed << std::setprecision(0) << std::setw(4) << info.movingAverageLatencyMs
-        << " (" << std::setprecision(1) << info.getTotalAverageLatencyMs() << ") ms";
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 60), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(200, 10, 10), 2);
-
-    out.str("");
-    out << "Pool: " << std::fixed << std::setprecision(1) <<
-        info.numRequestsInUse << "/" << FLAGS_nireq;
-    putHighlightedText(frame, out.str(), cv::Point2f(10, 90), cv::FONT_HERSHEY_TRIPLEX, 0.75, cv::Scalar(200, 10, 10), 2);
-}
-
 int main(int argc, char *argv[]) {
     try {
         /** This demo covers certain topology and cannot be generalized for any object detection **/
@@ -155,13 +136,13 @@ int main(int argc, char *argv[]) {
 
         //------------------------------ Running Segmentation routines ----------------------------------------------
         InferenceEngine::Core core;
-        PipelineBase pipeline(std::make_unique<SegmentationModel>(FLAGS_m),
+        AsyncPipeline pipeline(std::unique_ptr<SegmentationModel>(new SegmentationModel(FLAGS_m)),
             ConfigFactory::getUserConfig(FLAGS_d,FLAGS_l,FLAGS_c,FLAGS_pc,FLAGS_nireq,FLAGS_nstreams,FLAGS_nthreads),
             core);
         Presenter presenter;
 
-        auto startTimePoint = std::chrono::steady_clock::now();
-        while (true){
+        bool keepRunning = true;
+        while (keepRunning){
             int64_t frameNum;
             if (pipeline.isReadyToProcess()) {
                 //--- Capturing frame. If previous frame hasn't been inferred yet, reuse it instead of capturing new one
@@ -176,59 +157,41 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-
                 frameNum = pipeline.submitImage(curr_frame);
             }
 
             //--- Waiting for free input slot or output data available. Function will return immediately if any of them are available.
             pipeline.waitForData();
 
-            int key = 0;
-
             //--- Checking for results and rendering data if it's ready
             //--- If you need just plain data without rendering - cast result's underlying pointer to SegmentationResult*
             //    and use your own processing instead of calling renderSegmentationData().
             std::unique_ptr<ResultBase> result;
-            while (result = pipeline.getResult()) {
+            while ((result = pipeline.getResult()) && keepRunning) {
                 cv::Mat outFrame = DefaultRenderers::renderSegmentationData(result->asRef<SegmentationResult>());
                 //--- Showing results and device information
                 if (!outFrame.empty()) {
                     presenter.drawGraphs(outFrame);
-                    paintInfo(outFrame, pipeline.getPerformanceInfo());
+                    pipeline.getMetrics().paintMetrics(outFrame, { 10,22 }, 0.6);
                     if (!FLAGS_no_show) {
                         cv::imshow("Segmentation Results", outFrame);
 
-                        // Showing frame in window and storing key pressed if key variable doesn't contain key code yet
-                        if (key) {
-                            cv::waitKey(1);
+                        //--- Processing keyboard events
+                        auto key = cv::waitKey(1);
+                        if (27 == key || 'q' == key || 'Q' == key) {  // Esc
+                            keepRunning = false;
                         }
                         else {
-                            key = cv::waitKey(1);
+                            presenter.handleKey(key);
                         }
                     }
-                }
-            }
-
-            //--- Processing keyboard events
-            if (!FLAGS_no_show) {
-                if (27 == key || 'q' == key || 'Q' == key) {  // Esc
-                    break;
-                }
-                else {
-                    presenter.handleKey(key);
                 }
             }
         }
 
         //// --------------------------- Report metrics -------------------------------------------------------
-        auto info = pipeline.getPerformanceInfo();
         slog::info << slog::endl << "Metric reports:" << slog::endl;
-
-        //--- Show performace results 
-        slog::info << "Avg Latency: " << std::fixed << std::setprecision(1) <<
-            info.getTotalAverageLatencyMs() << " ms" << slog::endl;
-
-        slog::info << "FPS: " << std::fixed << std::setprecision(1) << info.FPS << slog::endl;
+        pipeline.getMetrics().printTotal();
 
         slog::info << presenter.reportMeans() << slog::endl;
     }
