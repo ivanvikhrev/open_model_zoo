@@ -19,8 +19,7 @@
 #include <iostream>
 
 namespace DefaultRenderers {
-    cv::Mat renderDetectionData(const DetectionResult& result)
-    {
+    cv::Mat renderDetectionData(const DetectionResult& result) {
         // Visualizing result data over source image
         auto outputImg = result.metaData->asRef<ImageMetaData>().img.clone();
 
@@ -36,7 +35,7 @@ namespace DefaultRenderers {
         return outputImg;
     }
 
-    cv::Mat renderSegmentationData(const SegmentationResult& result){
+    cv::Mat renderSegmentationData(const SegmentationResult& result) {
         auto inputImg = result.metaData->asRef<ImageMetaData>().img;
 
         // Visualizing result data over source image

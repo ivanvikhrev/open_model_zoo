@@ -22,7 +22,7 @@
 using namespace InferenceEngine;
 
 AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
-    model(std::move(modelInstance)){
+    model(std::move(modelInstance)) {
 
     // --------------------------- 1. Load inference engine ------------------------------------------------
     slog::info << "Loading Inference Engine" << slog::endl;
@@ -68,11 +68,11 @@ AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const Cnn
     model->onLoadCompleted(&execNetwork, requestsPool.get());
 }
 
-AsyncPipeline::~AsyncPipeline(){
+AsyncPipeline::~AsyncPipeline() {
     waitForTotalCompletion();
 }
 
-void AsyncPipeline::waitForData(){
+void AsyncPipeline::waitForData() {
     std::unique_lock<std::mutex> lock(mtx);
 
     condVar.wait(lock, [&] {return callbackException != nullptr ||
@@ -84,7 +84,7 @@ void AsyncPipeline::waitForData(){
         std::rethrow_exception(callbackException);
 }
 
-int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& request, const std::shared_ptr<MetaData>& metaData){
+int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& request, const std::shared_ptr<MetaData>& metaData) {
     auto frameStartTime = std::chrono::steady_clock::now();
     auto frameID = inputFrameId;
 
@@ -110,8 +110,7 @@ int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& r
                     this->requestsPool->setRequestIdle(request);
 
                     this->onProcessingCompleted(request);
-                }
-                catch (...) {
+                } catch (...) {
                     if (!this->callbackException) {
                         this->callbackException = std::move(std::current_exception());
                     }
@@ -120,7 +119,7 @@ int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& r
             condVar.notify_one();
     });
 
-    inputFrameId++;
+    ++inputFrameId;
     if (inputFrameId < 0)
         inputFrameId = 0;
 
@@ -139,8 +138,7 @@ int64_t AsyncPipeline::submitImage(cv::Mat img) {
     return submitRequest(request, md);
 }
 
-std::unique_ptr<ResultBase> AsyncPipeline::getResult()
-{
+std::unique_ptr<ResultBase> AsyncPipeline::getResult() {
     auto infResult = AsyncPipeline::getInferenceResult();
     if (infResult.IsEmpty()) {
         return std::unique_ptr<ResultBase>();
@@ -156,8 +154,7 @@ std::unique_ptr<ResultBase> AsyncPipeline::getResult()
     return result;
 }
 
-InferenceResult AsyncPipeline::getInferenceResult()
-{
+InferenceResult AsyncPipeline::getInferenceResult() {
     InferenceResult retVal;
 
     {
@@ -165,8 +162,7 @@ InferenceResult AsyncPipeline::getInferenceResult()
 
         const auto& it = completedInferenceResults.find(outputFrameId);
 
-        if (it != completedInferenceResults.end())
-        {
+        if (it != completedInferenceResults.end()) {
             retVal = std::move(it->second);
             completedInferenceResults.erase(it);
         }
@@ -174,7 +170,7 @@ InferenceResult AsyncPipeline::getInferenceResult()
 
     if(!retVal.IsEmpty()) {
         outputFrameId = retVal.frameId;
-        outputFrameId++;
+        ++outputFrameId;
         if (outputFrameId < 0)
             outputFrameId = 0;
     }

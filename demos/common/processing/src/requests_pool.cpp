@@ -23,8 +23,7 @@ RequestsPool::RequestsPool(InferenceEngine::ExecutableNetwork& execNetwork, unsi
     }
 }
 
-InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest()
-{
+InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest() {
     std::lock_guard<std::mutex> lock(mtx);
 
     const auto& it = std::find_if(requests.begin(), requests.end(),
@@ -38,7 +37,7 @@ InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest()
     }
 }
 
-void RequestsPool::setRequestIdle(const InferenceEngine::InferRequest::Ptr & request) {
+void RequestsPool::setRequestIdle(const InferenceEngine::InferRequest::Ptr& request) {
     std::lock_guard<std::mutex> lock(mtx);
     this->requests.at(request) = false;
     --numRequestsInUse;
@@ -69,7 +68,7 @@ std::vector<InferenceEngine::InferRequest::Ptr> RequestsPool::getInferRequestsLi
     std::lock_guard<std::mutex> lock(mtx);
     std::vector<InferenceEngine::InferRequest::Ptr> retVal;
     retVal.reserve(requests.size());
-    for (auto &pair : requests) {
+    for (auto& pair : requests) {
         retVal.push_back(pair.first);
     }
     return retVal;

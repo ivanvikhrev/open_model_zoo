@@ -24,7 +24,7 @@ struct CnnConfig {
     std::string cpuExtensionsPath;
     std::string clKernelsConfigPath;
     unsigned int maxAsyncRequests;
-    std::map < std::string, std::string> execNetworkConfig;
+    std::map<std::string, std::string> execNetworkConfig;
 };
 
 class ConfigFactory {
