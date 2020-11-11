@@ -163,11 +163,11 @@ void ModelRetinaFace::generate_anchors_fpn()
     }
 }
 
-std::vector<int> nms(std::vector<ModelRetinaFace::Anchor> boxes, std::vector<double> scores, double thresh) {
-    std::vector<double> areas;
+std::vector<int> nms(const std::vector<ModelRetinaFace::Anchor>& boxes, const std::vector<double>& scores, double thresh) {
+    std::vector<double> areas(boxes.size());
     for (int i = 0; i < boxes.size(); i++)
     {
-        areas.push_back((boxes[i].right - boxes[i].left) * (boxes[i].bottom - boxes[i].top));
+        areas[i] = (boxes[i].right - boxes[i].left) * (boxes[i].bottom - boxes[i].top);
     }
     std::vector<int> order(scores.size());
     std::iota(order.begin(), order.end(), 0);
@@ -215,7 +215,7 @@ std::vector<ModelRetinaFace::Anchor> _get_proposals(InferenceEngine::MemoryBlob:
                                                     const std::vector<ModelRetinaFace::Anchor>& anchors) {
     auto desc = rawData->getTensorDesc();
     auto sz = desc.getDims();
-    std::vector<ModelRetinaFace::Anchor> retVal;
+    std::vector<ModelRetinaFace::Anchor> retVal(anchors.size());
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
     auto bbox_pred_len = sz[1] / anchor_num;
@@ -230,9 +230,13 @@ std::vector<ModelRetinaFace::Anchor> _get_proposals(InferenceEngine::MemoryBlob:
 
         auto pred_ctr_x = dx * anchors[i].getWidth() + anchors[i].getXCenter();
         auto pred_ctr_y = dy * anchors[i].getHeight() + anchors[i].getYCenter();
-        auto pred_w = exp(dw) * anchors[i].getWidth();
-        auto pred_h = exp(dh) * anchors[i].getHeight();
-        retVal.push_back({ pred_ctr_x - 0.5 * (pred_w - 1.0), pred_ctr_y - 0.5 * (pred_h - 1.0),
+        auto exp_dw = exp(dw);
+        auto exp_dh = exp(dh);
+        auto w = anchors[i].getWidth();
+        auto h = anchors[i].getHeight();
+        auto pred_w = exp_dw * w; //exp(dw) * anchors[i].getWidth();
+        auto pred_h = exp_dh * h; //exp(dh) * anchors[i].getHeight();
+        retVal[i] = ModelRetinaFace::Anchor({ pred_ctr_x - 0.5 * (pred_w - 1.0), pred_ctr_y - 0.5 * (pred_h - 1.0),
             pred_ctr_x + 0.5 * (pred_w - 1.0), pred_ctr_y + 0.5 * (pred_h - 1.0) });
     }
     return retVal;
@@ -274,6 +278,7 @@ std::vector<double> _get_mask_scores(InferenceEngine::MemoryBlob::Ptr rawData, i
             }
         }
     }
+
     return retVal;
 }
 
@@ -282,35 +287,29 @@ std::vector<std::vector<cv::Point2f>> _get_landmarks(InferenceEngine::MemoryBlob
                                         const std::vector<ModelRetinaFace::Anchor>& anchors, double landmark_std) {
     auto desc = rawData->getTensorDesc();
     auto sz = desc.getDims();
-
     LockedMemory<const void> outputMapped = rawData->rmap();
     const float *memPtr = outputMapped.as<float*>();
     auto landmark_pred_len = sz[1] / anchor_num;
     auto stride = landmark_pred_len * sz[2] * sz[3];
-    std::vector<std::vector<cv::Point2f>> retVal(anchors.size()); // landmark_pred_len*sz[2] * sz[3]
+    std::vector<std::vector<cv::Point2f>> retVal(anchors.size());
 
-    for (int i = 0; i < anchors.size(); i++)
-    {
+    for (int i = 0; i < anchors.size(); i++) {
         auto ctrX = anchors[i].getXCenter();
         auto ctrY = anchors[i].getYCenter();
         auto blockWidth = sz[2]*sz[3];
+        retVal[i].reserve(ModelRetinaFace::LANDMARKS_NUM);
         for (int j = 0; j < ModelRetinaFace::LANDMARKS_NUM; j++) {
-            auto dx1 = memPtr[stride + i/2 + j * 2 * blockWidth];
-            auto dy1 = memPtr[stride + i/2 + (j * 2 + 1)*blockWidth];
-            auto dx2 = memPtr[i/2 + j * 2 * blockWidth];
-            auto dy2 = memPtr[i / 2 + (j * 2 + 1)*blockWidth];
             auto deltaX = (i % 2 ? memPtr[stride + i / 2 + j * 2 * blockWidth] : memPtr[i / 2 + j * 2 * blockWidth])* landmark_std;
             auto deltaY = (i % 2 ? memPtr[stride + i / 2 + (j * 2 + 1)*blockWidth] : memPtr[i / 2 + (j * 2 + 1)*blockWidth]) *  landmark_std;
-            //retVal[i].emplace_back(deltaX, deltaY);
-            retVal[i].emplace_back((float)(deltaX * anchors[i].getWidth() + anchors[i].getXCenter()),
-                (float)(deltaY * anchors[i].getHeight() + anchors[i].getYCenter()));
+
+            retVal[i][j] = cv::Point2f( {static_cast<float>(deltaX * anchors[i].getWidth() + anchors[i].getXCenter()),
+                                         static_cast<float>(deltaY * anchors[i].getHeight() + anchors[i].getYCenter())} );
         }
     }
     return retVal;
 }
 
-void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)
-{
+void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData) {
     auto& img = inputData.asRef<ImageInputData>().inputImage;
 
     if (useAutoResize) {
@@ -325,6 +324,7 @@ void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::In
 
     metaData = std::make_shared<ImageRetinaFaceMetaData>(img);
 }
+
 std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infResult) {
     std::vector<Anchor> proposals_list;
     std::vector<double> scores_list;
@@ -365,10 +365,8 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             maskScores = _get_mask_scores(infResult.outputsData[separateOutputsNames[OT_MASKSCORES][idx]], anchor_num);
         }
 
-        for (auto& sc : scores)
-        {
-            if (sc < confidenceThreshold)
-            {
+        for (auto& sc : scores) {
+            if (sc < confidenceThreshold) {
                 sc = -1;
             }
         }
@@ -391,7 +389,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
 
     DetectionResult* result = new DetectionResult;
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
-    auto sz = infResult.metaData->asRef<ImageMetaData>().img.size();
+    auto sz = infResult.metaData->asRef<ImageRetinaFaceMetaData>().img.size();
     double scale_x = ((double)netInputWidth) / sz.width;
     double scale_y = ((double)netInputHeight) / sz.height;
 
@@ -404,6 +402,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         desc.height = (float) (proposals_list[i].getHeight() / scale_y);
         desc.labelID = 1;
         desc.label = "Face";
+
         if (desc.confidence > confidenceThreshold) {
             /** Filtering out objects with confidence < confidence_threshold probability **/
             result->objects.push_back(desc);
@@ -417,7 +416,8 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
             landmark.y /= scale_y;
         }
     }
-    //infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = landmarks_list;
-    result->landmarks_regression = std::move(landmarks_list);
+
+    infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = std::move(landmarks_list);
+
     return std::unique_ptr<ResultBase>(result);;
 }

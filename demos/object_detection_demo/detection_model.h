@@ -38,8 +38,8 @@ public:
 protected:
     std::vector<std::string> labels;
 
-    size_t netInputHeight=0;
-    size_t netInputWidth=0;
+    size_t netInputHeight = 0;
+    size_t netInputWidth = 0;
 
     bool useAutoResize=false;
     float confidenceThreshold=0;

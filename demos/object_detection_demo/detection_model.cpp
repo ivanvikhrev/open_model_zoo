@@ -24,8 +24,7 @@ DetectionModel::DetectionModel(const std::string& modelFileName, float confidenc
     :ModelBase(modelFileName),
     useAutoResize(useAutoResize),
     confidenceThreshold(confidenceThreshold),
-    labels(labels) {
-}
+    labels(labels) {}
 
 void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)
 {

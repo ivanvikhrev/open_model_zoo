@@ -80,6 +80,7 @@ protected:
         OT_MASKSCORES,
         OT_MAX
     };
+
     std::vector <std::string> separateOutputsNames[OT_MAX];
 };
 

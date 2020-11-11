@@ -17,10 +17,10 @@
 #include <default_renderers.h>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
+#include <type_traits>
 
 namespace DefaultRenderers {
-    cv::Mat renderDetectionData(const DetectionResult& result)
-    {
+    cv::Mat renderDetectionData(const DetectionResult& result) {
         // Visualizing result data over source image
         auto outputImg = result.metaData->asRef<ImageMetaData>().img.clone();
 
@@ -33,25 +33,19 @@ namespace DefaultRenderers {
             cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
         }
 
-        for (auto face_landmarks : result.landmarks_regression) {
-            for (auto landmark : face_landmarks) {
-                cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
+        try {
+            for (auto face_landmarks : result.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression) {
+                for (auto landmark : face_landmarks) {
+                    cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
+                }
             }
         }
-
-        //try {
-        //    for (auto face_landmarks : result.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression) {
-        //        for (auto landmark : face_landmarks) {
-        //            cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
-        //        }
-        //    }
-        //}
-        //catch (...) {}
+        catch (...) {}
 
         return outputImg;
     }
 
-    cv::Mat renderSegmentationData(const SegmentationResult& result){
+    cv::Mat renderSegmentationData(const SegmentationResult& result) {
         auto inputImg = result.metaData->asRef<ImageMetaData>().img;
 
         // Visualizing result data over source image
