@@ -21,8 +21,8 @@
 
 using namespace InferenceEngine;
 
-AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
-    model(std::move(modelInstance)) {
+AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase>&& modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
+    model(std::move(modelInstance)){
 
     // --------------------------- 1. Load inference engine ------------------------------------------------
     slog::info << "Loading Inference Engine" << slog::endl;
@@ -84,9 +84,16 @@ void AsyncPipeline::waitForData() {
         std::rethrow_exception(callbackException);
 }
 
-int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& request, const std::shared_ptr<MetaData>& metaData) {
+int64_t AsyncPipeline::submitData(const InputData& inputData){
     auto frameStartTime = std::chrono::steady_clock::now();
     auto frameID = inputFrameId;
+
+    auto request = requestsPool->getIdleRequest();
+    if (!request)
+        return -1;
+
+    std::shared_ptr<MetaData> metaData;
+    model->preprocess(inputData, request, metaData);
 
     request->SetCompletionCallback([this,
         frameStartTime,
