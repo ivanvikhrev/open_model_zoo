@@ -33,10 +33,8 @@ namespace DefaultRenderers {
         }
 
         try {
-            for (auto face_landmarks : result.asRef<RetinaFaceDetectionResult>().landmarks) {
-                for (auto landmark : face_landmarks) {
-                    cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
-                }
+            for (auto lmark : result.asRef<RetinaFaceDetectionResult>().landmarks) {
+                cv::circle(outputImg, lmark, 4, cv::Scalar(255, 0, 255), -1);
             }
         }
         catch (...) {}

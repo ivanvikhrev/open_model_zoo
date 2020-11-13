@@ -63,7 +63,7 @@ struct DetectionResult : public ResultBase {
 };
 
 struct RetinaFaceDetectionResult : public DetectionResult {
-    std::vector<std::vector<cv::Point2f>> landmarks;
+    std::vector<cv::Point2f> landmarks;
     std::vector<double> masks;
 };
 
