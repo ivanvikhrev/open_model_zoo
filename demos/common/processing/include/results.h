@@ -62,6 +62,11 @@ struct DetectionResult : public ResultBase {
     std::vector<DetectedObject> objects;
 };
 
+struct RetinaFaceDetectionResult : public DetectionResult {
+    std::vector<std::vector<cv::Point2f>> landmarks;
+    std::vector<double> masks;
+};
+
 struct SegmentationResult : public ResultBase {
     cv::Mat mask;
 };

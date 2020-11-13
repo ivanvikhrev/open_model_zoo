@@ -39,10 +39,3 @@ struct ImageMetaData : public MetaData {
         this->img = img;
     }
 };
-
-struct ImageRetinaFaceMetaData : public ImageMetaData {
-    std::vector<std::vector<cv::Point2f>> landmarks_regression;
-
-    ImageRetinaFaceMetaData() : ImageMetaData() {}
-    ImageRetinaFaceMetaData(const cv::Mat& img) : ImageMetaData(img) {}
-};

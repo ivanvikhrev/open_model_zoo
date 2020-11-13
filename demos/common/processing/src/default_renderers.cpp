@@ -17,7 +17,6 @@
 #include <default_renderers.h>
 #include <opencv2/imgproc.hpp>
 #include <iostream>
-#include <type_traits>
 
 namespace DefaultRenderers {
     cv::Mat renderDetectionData(const DetectionResult& result) {
@@ -34,7 +33,7 @@ namespace DefaultRenderers {
         }
 
         try {
-            for (auto face_landmarks : result.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression) {
+            for (auto face_landmarks : result.asRef<RetinaFaceDetectionResult>().landmarks) {
                 for (auto landmark : face_landmarks) {
                     cv::circle(outputImg, landmark, 4, cv::Scalar(255, 0, 255), -1);
                 }

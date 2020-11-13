@@ -20,6 +20,6 @@
 #include "results.h"
 
 namespace DefaultRenderers {
-    cv::Mat renderDetectionData(const DetectionResult & result);
+    cv::Mat renderDetectionData(const DetectionResult& result);
     cv::Mat renderSegmentationData(const SegmentationResult& result);
 }

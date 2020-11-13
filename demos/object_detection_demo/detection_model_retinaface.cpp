@@ -22,7 +22,7 @@ using namespace InferenceEngine;
 
 ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confidenceThreshold,
     bool useAutoResize, bool shouldDetectMasks, const std::vector<std::string>& labels)
-    :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels), shouldDetectMasks(shouldDetectMasks) {
+    : DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels), shouldDetectMasks(shouldDetectMasks) {
     anchorCfg.push_back({ 32, { 32,16 }, 16, { 1.0 } });
     anchorCfg.push_back({ 16, { 8,4 }, 16, { 1.0 } });
     anchorCfg.push_back({ 8, { 2,1 }, 16, { 1.0 } });
@@ -254,7 +254,7 @@ std::vector<double> _get_scores(InferenceEngine::MemoryBlob::Ptr rawData, int an
     for (size_t x = anchor_num; x < sz[1]; ++x) {
         for (size_t y = 0; y < sz[2]; ++y) {
             for (size_t z = 0; z < sz[3]; ++z) {
-                retVal[(y*sz[3] + z)*restAnchors + (x - anchor_num)] = memPtr[ (x*sz[2]+y)*sz[3]+z];
+                retVal[(y*sz[3] + z)*restAnchors + (x - anchor_num)] = memPtr[(x*sz[2]+y)*sz[3]+z];
             }
         }
     }
@@ -309,21 +309,6 @@ std::vector<std::vector<cv::Point2f>> _get_landmarks(InferenceEngine::MemoryBlob
     return retVal;
 }
 
-void ModelRetinaFace::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData) {
-    auto& img = inputData.asRef<ImageInputData>().inputImage;
-
-    if (useAutoResize) {
-        /* Just set input blob containing read image. Resize and layout conversionx will be done automatically */
-        request->SetBlob(inputsNames[0], wrapMat2Blob(img));
-    }
-    else {
-        /* Resize and copy data from the image to the input blob */
-        Blob::Ptr frameBlob = request->GetBlob(inputsNames[0]);
-        matU8ToBlob<uint8_t>(img, frameBlob);
-    }
-
-    metaData = std::make_shared<ImageRetinaFaceMetaData>(img);
-}
 
 std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infResult) {
     std::vector<Anchor> proposals_list;
@@ -387,9 +372,9 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         }
     }
 
-    DetectionResult* result = new DetectionResult;
+    RetinaFaceDetectionResult* result = new RetinaFaceDetectionResult;
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
-    auto sz = infResult.metaData->asRef<ImageRetinaFaceMetaData>().img.size();
+    auto sz = infResult.metaData->asRef<ImageMetaData>().img.size();
     double scale_x = ((double)netInputWidth) / sz.width;
     double scale_y = ((double)netInputHeight) / sz.height;
 
@@ -409,7 +394,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         }
     }
 
-    /** scaling landmarks coordinates**/
+    /** scaling landmarks coordinates **/
     for (auto& face_landmarks : landmarks_list) {
         for (auto& landmark : face_landmarks) {
             landmark.x /= scale_x;
@@ -417,7 +402,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         }
     }
 
-    infResult.metaData->asRef<ImageRetinaFaceMetaData>().landmarks_regression = std::move(landmarks_list);
+    result->landmarks = std::move(landmarks_list);
 
     return std::unique_ptr<ResultBase>(result);;
 }
