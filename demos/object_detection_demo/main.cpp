@@ -139,6 +139,8 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
 
 int main(int argc, char *argv[]) {
     try {
+        PerformanceMetrics metrics;
+
         slog::info << "InferenceEngine: " << printable(*InferenceEngine::GetInferenceEngineVersion()) << slog::endl;
 
         // ------------------------------ Parsing and validation of input args ---------------------------------
@@ -177,6 +179,7 @@ int main(int argc, char *argv[]) {
             int64_t frameNum = 0;
             if (pipeline.isReadyToProcess()) {
                 //--- Capturing frame. If previous frame hasn't been inferred yet, reuse it instead of capturing new one
+                auto startTime = std::chrono::steady_clock::now();
                 curr_frame = cap->read();
                 if (curr_frame.empty()) {
                     if (!frameNum) {
@@ -187,7 +190,8 @@ int main(int argc, char *argv[]) {
                     }
                 }
 
-                frameNum = pipeline.submitData(ImageInputData(curr_frame));
+                frameNum = pipeline.submitData(ImageInputData(curr_frame),
+                    std::shared_ptr<MetaData>(new ImageMetaData(curr_frame, startTime)));
             }
 
             //--- Waiting for free input slot or output data available. Function will return immediately if any of them are available.
@@ -202,7 +206,8 @@ int main(int argc, char *argv[]) {
                 //--- Showing results and device information
                 if (!outFrame.empty()) {
                     presenter.drawGraphs(outFrame);
-                    pipeline.getMetrics().paintMetrics(outFrame, { 10,22 }, 0.6);
+                    metrics.update(result->metaData->asRef<ImageMetaData>().timeStamp,
+                        outFrame, { 10,22 }, 0.65);
                     if (!FLAGS_no_show) {
                         cv::imshow("Detection Results", outFrame);
                         //--- Processing keyboard events
@@ -219,7 +224,7 @@ int main(int argc, char *argv[]) {
 
         //// --------------------------- Report metrics -------------------------------------------------------
         slog::info << slog::endl << "Metric reports:" << slog::endl;
-        pipeline.getMetrics().printTotal();
+        metrics.printTotal();
 
         slog::info << presenter.reportMeans() << slog::endl;
     } catch (const std::exception& error) {
