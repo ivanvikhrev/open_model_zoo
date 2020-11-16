@@ -19,12 +19,10 @@
 #include <vector>
 #include <ngraph/ngraph.hpp>
 
-class ModelRetinaFace :
-    public DetectionModel
-{
+class ModelRetinaFace
+    : public DetectionModel {
 protected:
-    struct AnchorCfgLine
-    {
+    struct AnchorCfgLine {
         int stride;
         std::vector<double> scales;
         int baseSize;
@@ -32,14 +30,13 @@ protected:
     };
 
 public:
-    struct Anchor
-    {
+    struct Anchor {
         double left;
         double top;
         double right;
         double bottom;
 
-        double getWidth() const { return (right - left) +1; }
+        double getWidth() const { return (right - left) + 1; }
         double getHeight() const { return (bottom - top) + 1; }
         double getXCenter() const { return left + (getWidth() - 1.0) / 2.; }
         double getYCenter() const { return top + (getHeight() - 1.0) / 2.; }
@@ -47,7 +44,7 @@ public:
 
 public:
     static const int LANDMARKS_NUM = 5;
-
+    static const int DEFAULT_NUM_FACES = 1000;
     /// Loads model and performs required initialization
     /// @param model_name name of model to load
     /// @param cnnConfig - fine tuning configuration for CNN model
@@ -65,13 +62,9 @@ public:
     std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult);
 
 protected:
-    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork);
-    void generate_anchors_fpn();
-    bool shouldDetectMasks = false;
-    std::vector <AnchorCfgLine> anchorCfg;
-    std::map<int, std::vector <Anchor>> _anchors_fpn;
-    double landmark_std;
 
+    double landmarkStd;
+    bool shouldDetectMasks = false;
     enum EOutputType {
         OT_BBOX,
         OT_SCORES,
@@ -81,5 +74,12 @@ protected:
     };
 
     std::vector <std::string> separateOutputsNames[OT_MAX];
+    const std::vector<AnchorCfgLine> anchorCfg;
+    std::map<int, std::vector <Anchor>> _anchors_fpn;
+
+    void generateAnchorsFpn();
+    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork);
+
+
 };
 
