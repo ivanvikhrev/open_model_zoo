@@ -14,8 +14,10 @@
 // limitations under the License.
 */
 
-#include "detection_model_yolo.h"
+#include "models/detection_model_yolo.h"
 #include <samples/slog.hpp>
+#include <samples/common.hpp>
+#include <ngraph/ngraph.hpp>
 
 using namespace InferenceEngine;
 
@@ -40,7 +42,8 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
     if (useAutoResize) {
         input->getPreProcess().setResizeAlgorithm(ResizeAlgorithm::RESIZE_BILINEAR);
         input->getInputData()->setLayout(Layout::NHWC);
-    } else {
+    }
+    else {
         input->getInputData()->setLayout(Layout::NCHW);
     }
 
@@ -71,7 +74,8 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
                 regions.emplace(outputLayer->first, Region(regionYolo));
             }
         }
-    } else {
+    }
+    else {
         throw std::runtime_error("Can't get ngraph::Function. Make sure the provided model is in IR version 10 or greater.");
     }
 
@@ -81,7 +85,7 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
     }
 }
 
-std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult& infResult) {
+std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult & infResult) {
     DetectionResult* result = new DetectionResult;
 
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);

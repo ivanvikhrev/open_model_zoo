@@ -16,11 +16,17 @@
 
 #pragma once
 #include "detection_model.h"
-#include <ngraph/ngraph.hpp>
 
-class ModelYolo3 :
-    public DetectionModel {
+namespace ngraph {
+    namespace op {
+        namespace v0 {
+            class RegionYolo;
+        }
+        using v0::RegionYolo;
+    }
+}
 
+class ModelYolo3 : public DetectionModel {
 protected:
     class Region {
     public:

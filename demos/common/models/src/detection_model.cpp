@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
-#include "detection_model.h"
-#include <samples/args_helper.hpp>
+#include "models/detection_model.h"
+#include <samples/ocv_common.hpp>
 #include <samples/slog.hpp>
 
 using namespace InferenceEngine;
@@ -33,7 +33,8 @@ std::shared_ptr<InternalModelData> DetectionModel::preprocess(const InputData& i
     if (useAutoResize) {
         /* Just set input blob containing read image. Resize and layout conversionx will be done automatically */
         request->SetBlob(inputsNames[0], wrapMat2Blob(img));
-    } else {
+    }
+    else {
         /* Resize and copy data from the image to the input blob */
         Blob::Ptr frameBlob = request->GetBlob(inputsNames[0]);
         matU8ToBlob<uint8_t>(img, frameBlob);

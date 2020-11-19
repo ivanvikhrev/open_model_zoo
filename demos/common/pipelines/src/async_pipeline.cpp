@@ -14,15 +14,15 @@
 // limitations under the License.
 */
 
-#include "async_pipeline.h"
-#include <samples/args_helper.hpp>
+#include "pipelines/async_pipeline.h"
 #include <cldnn/cldnn_config.hpp>
+#include <samples/common.hpp>
 #include <samples/slog.hpp>
 
 using namespace InferenceEngine;
 
 AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase>&& modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
-    model(std::move(modelInstance)){
+    model(std::move(modelInstance)) {
 
     // --------------------------- 1. Load inference engine ------------------------------------------------
     slog::info << "Loading Inference Engine" << slog::endl;
@@ -65,7 +65,7 @@ AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase>&& modelInstance, const C
     requestsPool.reset(new RequestsPool(execNetwork, cnnConfig.maxAsyncRequests));
 
     // --------------------------- 6. Call onLoadCompleted to complete initialization of model -------------
-    model->onLoadCompleted(&execNetwork, requestsPool.get());
+    model->onLoadCompleted(&execNetwork, requestsPool->getInferRequestsList());
 }
 
 AsyncPipeline::~AsyncPipeline() {
@@ -115,7 +115,8 @@ int64_t AsyncPipeline::submitData(const InputData& inputData, const std::shared_
                     this->requestsPool->setRequestIdle(request);
 
                     this->onProcessingCompleted(request);
-                } catch (...) {
+                }
+                catch (...) {
                     if (!this->callbackException) {
                         this->callbackException = std::move(std::current_exception());
                     }
@@ -132,17 +133,6 @@ int64_t AsyncPipeline::submitData(const InputData& inputData, const std::shared_
     return frameID;
 }
 
-int64_t AsyncPipeline::submitImage(cv::Mat img) {
-    auto request = requestsPool->getIdleRequest();
-    if (!request)
-        return -1;
-
-    std::shared_ptr<MetaData> md;
-    model->preprocess(ImageInputData(img), request, md);
-
-    return submitRequest(request, md);
-}
-
 std::unique_ptr<ResultBase> AsyncPipeline::getResult() {
     auto infResult = AsyncPipeline::getInferenceResult();
     if (infResult.IsEmpty()) {
@@ -157,7 +147,6 @@ std::unique_ptr<ResultBase> AsyncPipeline::getResult() {
 
 InferenceResult AsyncPipeline::getInferenceResult() {
     InferenceResult retVal;
-
     {
         std::lock_guard<std::mutex> lock(mtx);
 

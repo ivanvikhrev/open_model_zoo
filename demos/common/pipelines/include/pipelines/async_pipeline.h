@@ -19,11 +19,10 @@
 #include <deque>
 #include <map>
 #include <condition_variable>
-#include "config_factory.h"
-#include "requests_pool.h"
-#include "results.h"
-#include "model_base.h"
-#include "samples/performance_metrics.hpp"
+#include "pipelines/config_factory.h"
+#include "pipelines/requests_pool.h"
+#include "models/results.h"
+#include "models/model_base.h"
 
 /// This is base class for asynchronous pipeline
 /// Derived classes should add functions for data submission and output processing
@@ -69,7 +68,6 @@ protected:
     /// @returns InferenceResult with processed information or empty InferenceResult (with negative frameID) if there's no any results yet.
     virtual InferenceResult getInferenceResult();
 
-protected:
     std::unique_ptr<RequestsPool> requestsPool;
     std::unordered_map<int64_t, InferenceResult> completedInferenceResults;
 

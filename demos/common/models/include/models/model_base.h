@@ -17,17 +17,16 @@
 #pragma once
 #include "input_data.h"
 #include "results.h"
-#include "requests_pool.h"
 
 class ModelBase {
 public:
     ModelBase(const std::string& modelFileName) { this->modelFileName = modelFileName; }
     virtual ~ModelBase() {}
 
-    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork) = 0;
+    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) = 0;
     virtual std::shared_ptr<InternalModelData> preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request) = 0;
     virtual std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) = 0;
-    virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool) {
+        virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, const std::vector<InferenceEngine::InferRequest::Ptr>& requests) {
         this->execNetwork = execNetwork; }
     const std::vector<std::string>& getOutputsNames() const { return outputsNames; }
     const std::vector<std::string>& getInputsNames() const { return inputsNames; }

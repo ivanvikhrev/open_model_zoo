@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "requests_pool.h"
+#include "pipelines/requests_pool.h"
 
 RequestsPool::RequestsPool(InferenceEngine::ExecutableNetwork& execNetwork, unsigned int size) :
     numRequestsInUse(0) {
@@ -26,11 +26,11 @@ RequestsPool::RequestsPool(InferenceEngine::ExecutableNetwork& execNetwork, unsi
 InferenceEngine::InferRequest::Ptr RequestsPool::getIdleRequest() {
     std::lock_guard<std::mutex> lock(mtx);
 
-    const auto& it = std::find_if(requests.begin(), requests.end(),
-        [](std::pair<const InferenceEngine::InferRequest::Ptr, bool>& x) { return !x.second; });
+    const auto& it = std::find_if(requests.begin(), requests.end(), [](std::pair<const InferenceEngine::InferRequest::Ptr, bool>& x) {return !x.second; });
     if (it == requests.end()) {
         return InferenceEngine::InferRequest::Ptr();
-    } else {
+    }
+    else {
         it->second = true;
         numRequestsInUse++;
         return it->first;

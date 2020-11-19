@@ -35,11 +35,13 @@
 
 #include <iostream>
 
-#include "async_pipeline.h"
-#include "detection_model_yolo.h"
-#include "detection_model_ssd.h"
-#include "config_factory.h"
-#include "default_renderers.h"
+#include <samples/performance_metrics.hpp>
+
+#include "pipelines/async_pipeline.h"
+#include "pipelines/config_factory.h"
+#include "pipelines/metadata.h"
+#include "models/detection_model_yolo.h"
+#include "models/detection_model_ssd.h"
 
 static const char help_message[] = "Print a usage message.";
 static const char video_message[] = "Required. Path to a video file (specify \"cam\" to work with camera).";
@@ -64,7 +66,7 @@ static const char num_streams_message[] = "Optional. Number of streams to use fo
 static const char no_show_processed_video[] = "Optional. Do not show processed video.";
 static const char utilization_monitors_message[] = "Optional. List of monitors to show initially.";
 static const char iou_thresh_output_message[] = "Optional. Filtering intersection over union threshold for overlapping boxes (YOLOv3 only).";
-static const char at_message[] = "Architecture type: ssd or yolo";
+static const char at_message[] = "Required. Architecture type: ssd or yolo";
 
 DEFINE_bool(h, false, help_message);
 DEFINE_string(i, "", video_message);
@@ -96,6 +98,7 @@ static void showUsage() {
     std::cout << std::endl;
     std::cout << "    -h                        " << help_message << std::endl;
     std::cout << "    -i \"<path>\"               " << video_message << std::endl;
+    std::cout << "    -at                       " << at_message << std::endl;
     std::cout << "    -m \"<path>\"               " << model_message << std::endl;
     std::cout << "      -l \"<absolute_path>\"    " << custom_cpu_library_message << std::endl;
     std::cout << "          Or" << std::endl;
@@ -112,7 +115,6 @@ static void showUsage() {
     std::cout << "    -loop                     " << loop_message << std::endl;
     std::cout << "    -no_show                  " << no_show_processed_video << std::endl;
     std::cout << "    -u                        " << utilization_monitors_message << std::endl;
-    std::cout << "    -at                       " << at_message << std::endl;
 }
 
 
@@ -134,8 +136,38 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
         throw std::logic_error("Parameter -m is not set");
     }
 
+    if (FLAGS_at.empty()) {
+        throw std::logic_error("Parameter -m is not set");
+    }
     return true;
 }
+
+// Input image is stored inside metadata, as we put it there during submission stage
+cv::Mat renderDetectionData(const DetectionResult& result) {
+    if (!result.metaData) {
+        throw std::invalid_argument("Renderer: metadata is null");
+    }
+
+    auto outputImg = result.metaData->asRef<ImageMetaData>().img.clone();
+
+    if (outputImg.empty()) {
+        throw std::invalid_argument("Renderer: image provided in metadata is empty");
+    }
+
+    // Visualizing result data over source image
+
+    for (auto obj : result.objects) {
+        std::ostringstream conf;
+        conf << ":" << std::fixed << std::setprecision(3) << obj.confidence;
+        cv::putText(outputImg, obj.label + conf.str(),
+            cv::Point2f(obj.x, obj.y - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
+            cv::Scalar(0, 0, 255));
+        cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
+    }
+
+    return outputImg;
+}
+
 
 int main(int argc, char *argv[]) {
     try {
@@ -159,12 +191,14 @@ int main(int argc, char *argv[]) {
             labels = DetectionModel::loadLabels(FLAGS_labels);
 
         std::unique_ptr<ModelBase> model;
-        if (FLAGS_mt == "ssd") {
+        if (FLAGS_at=="ssd") {
             model.reset(new ModelSSD(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, labels));
-        } else if (FLAGS_mt == "yolo") {
+        }
+        else if (FLAGS_at=="yolo") {
             model.reset(new ModelYolo3(FLAGS_m,(float)FLAGS_t, FLAGS_auto_resize, (float)FLAGS_iou_t, labels));
-        } else {
-            slog::err << "No model type or invalid model type (-mt) provided: " + FLAGS_mt << slog::endl;
+        }
+        else {
+            slog::err << "No model type or invalid model type (-at) provided: " + FLAGS_at << slog::endl;
             return -1;
         }
 
@@ -184,7 +218,8 @@ int main(int argc, char *argv[]) {
                 if (curr_frame.empty()) {
                     if (!frameNum) {
                         throw std::logic_error("Can't read an image from the input");
-                    } else {
+                    }
+                    else {
                         // Input stream is over
                         break;
                     }
@@ -202,7 +237,7 @@ int main(int argc, char *argv[]) {
             //    and use your own processing instead of calling renderDetectionData().
             std::unique_ptr<ResultBase> result;
             while ((result = pipeline.getResult()) && keepRunning) {
-                cv::Mat outFrame = DefaultRenderers::renderDetectionData(result->asRef<DetectionResult>());
+                cv::Mat outFrame = renderDetectionData(result->asRef<DetectionResult>());
                 //--- Showing results and device information
                 if (!outFrame.empty()) {
                     presenter.drawGraphs(outFrame);
@@ -211,10 +246,11 @@ int main(int argc, char *argv[]) {
                     if (!FLAGS_no_show) {
                         cv::imshow("Detection Results", outFrame);
                         //--- Processing keyboard events
-                        auto key = cv::waitKey(1);
+                        int key = cv::waitKey(1);
                         if (27 == key || 'q' == key || 'Q' == key) {  // Esc
                             keepRunning = false;
-                        } else {
+                        }
+                        else {
                             presenter.handleKey(key);
                         }
                     }
@@ -227,10 +263,12 @@ int main(int argc, char *argv[]) {
         metrics.printTotal();
 
         slog::info << presenter.reportMeans() << slog::endl;
-    } catch (const std::exception& error) {
+    }
+    catch (const std::exception& error) {
         slog::err << "[ ERROR ] " << error.what() << slog::endl;
         return 1;
-    } catch (...) {
+    }
+    catch (...) {
         slog::err << "[ ERROR ] Unknown/internal exception happened." << slog::endl;
         return 1;
     }

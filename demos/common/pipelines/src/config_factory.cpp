@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "config_factory.h"
+#include "pipelines/config_factory.h"
 
 #include <set>
 
@@ -49,7 +49,8 @@ CnnConfig ConfigFactory::getUserConfig(const std::string& d, const std::string& 
             if (d.find("MULTI") != std::string::npos
                 && devices.find("GPU") != devices.end()) {
                 config.execNetworkConfig.emplace(CONFIG_KEY(CPU_BIND_THREAD), CONFIG_VALUE(NO));
-            } else {
+            }
+            else {
                 // pin threads for CPU portion of inference
                 config.execNetworkConfig.emplace(CONFIG_KEY(CPU_BIND_THREAD), CONFIG_VALUE(YES));
             }
@@ -58,7 +59,8 @@ CnnConfig ConfigFactory::getUserConfig(const std::string& d, const std::string& 
             config.execNetworkConfig.emplace(CONFIG_KEY(CPU_THROUGHPUT_STREAMS),
                 (deviceNstreams.count(device) > 0 ? std::to_string(deviceNstreams.at(device))
                     : CONFIG_VALUE(CPU_THROUGHPUT_AUTO)));
-        } else if (device == "GPU") {
+        }
+        else if (device == "GPU") {
             config.execNetworkConfig.emplace(CONFIG_KEY(GPU_THROUGHPUT_STREAMS),
                 (deviceNstreams.count(device) > 0 ? std::to_string(deviceNstreams.at(device))
                     : CONFIG_VALUE(GPU_THROUGHPUT_AUTO)));
@@ -83,7 +85,8 @@ CnnConfig ConfigFactory::getMinLatencyConfig(const std::string& d, const std::st
     for (auto& device : devices) {
         if (device == "CPU") {  // CPU supports a few special performance-oriented keys
             config.execNetworkConfig.emplace(CONFIG_KEY(CPU_THROUGHPUT_STREAMS), "1");
-        } else if (device == "GPU") {
+        }
+        else if (device == "GPU") {
             config.execNetworkConfig.emplace(CONFIG_KEY(GPU_THROUGHPUT_STREAMS), "1");
         }
     }

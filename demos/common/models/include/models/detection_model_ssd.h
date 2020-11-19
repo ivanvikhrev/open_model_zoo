@@ -13,13 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
 #pragma once
-#include "model_base.h"
-#include "opencv2/core.hpp"
-
-class DetectionModel :
-    public ModelBase {
-
+#include "detection_model.h"
+class ModelSSD : public DetectionModel {
 public:
     /// Constructor
     /// @param modelFileName name of model to load
@@ -29,20 +26,15 @@ public:
     /// Otherwise, image will be preprocessed and resized using OpenCV routines.
     /// @param labels - array of labels for every class. If this array is empty or contains less elements
     /// than actual classes number, default "Label #N" will be shown for missing items.
-    DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels);
+    ModelSSD(const std::string& modelFileName,
+        float confidenceThreshold, bool useAutoResize,
+        const std::vector<std::string>& labels = std::vector<std::string>());
 
-    virtual std::shared_ptr<InternalModelData> preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request) override;
-
-    static std::vector<std::string> loadLabels(const std::string& labelFilename);
+    virtual void onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, const std::vector<InferenceEngine::InferRequest::Ptr>& requests) override;
+    virtual std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) override;
 
 protected:
-    std::vector<std::string> labels;
-
-    size_t netInputHeight = 0;
-    size_t netInputWidth = 0;
-
-    bool useAutoResize;
-    float confidenceThreshold;
-
-    std::string getLabelName(int labelID) { return (size_t)labelID < labels.size() ? labels[labelID] : std::string("Label #") + std::to_string(labelID); }
+    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) override;
+    size_t maxProposalCount = 0;
+    size_t objectSize = 0;
 };
