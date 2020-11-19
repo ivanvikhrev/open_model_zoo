@@ -113,8 +113,6 @@ int64_t AsyncPipeline::submitData(const InputData& inputData, const std::shared_
 
                     completedInferenceResults.emplace(frameID, result);
                     this->requestsPool->setRequestIdle(request);
-
-                    this->onProcessingCompleted(request);
                 }
                 catch (...) {
                     if (!this->callbackException) {
