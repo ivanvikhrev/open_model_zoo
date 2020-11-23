@@ -56,14 +56,14 @@ public:
     /// than actual classes number, default "Label #N" will be shown for missing items.
     /// @param engine - pointer to InferenceEngine::Core instance to use.
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
-    ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize,
-        bool shouldDetectMasks = false, const std::vector<std::string>& labels = std::vector<std::string>());
-    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult); // TODO: del labels, add thresholds
+    ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize);
+    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult);
 
 protected:
 
     double landmarkStd;
-    double mask_prob_threshold = 0.7;
+    double maskThreshold;
+    double iouThreshold;
     bool shouldDetectMasks;
     enum EOutputType {
         OT_BBOX,

@@ -21,17 +21,19 @@
 
 using namespace InferenceEngine;
 
-ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confidenceThreshold,
-    bool useAutoResize, bool shouldDetectMasks, const std::vector<std::string>& labels)
-    : DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels), shouldDetectMasks(shouldDetectMasks),
+ModelRetinaFace::ModelRetinaFace(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize)
+    : DetectionModel(modelFileName, confidenceThreshold, useAutoResize, { "Face" }),
     anchorCfg({ {32, { 32, 16 }, 16, { 1.0 }}, { 16, { 8, 4 }, 16, { 1.0 }}, { 8, { 2, 1 }, 16, { 1.0 }} }) {
     generateAnchorsFpn();
-    landmarkStd = shouldDetectMasks ? 0.2 : 1.0;
+    iouThreshold = 0.5;
+    maskThreshold = 0.7;
+    shouldDetectMasks = false;
+    landmarkStd = 1.0;
 }
 
 void ModelRetinaFace::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork) {
-    // --------------------------- Configure input & output ---------------------------------------------
-    // --------------------------- Prepare input blobs -----------------------------------------------------
+    // --------------------------- Configure input & output -------------------------------------------------
+    // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
     InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
     if (inputInfo.size() != 1) {
@@ -76,8 +78,13 @@ void ModelRetinaFace::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetw
         else if(output.first.find("landmark") != -1) {
             type = OT_LANDMARK;
         }
-        else if(shouldDetectMasks && output.first.find("type") != -1) {
+        else if(output.first.find("type") != -1) {
             type = OT_MASKSCORES;
+            labels.clear();
+            labels.push_back("Mask");
+            labels.push_back("No Mask");
+            shouldDetectMasks = true;
+            landmarkStd = 0.2;
         }
         else {
             continue;
@@ -350,7 +357,6 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
     result->objects.reserve(keep.size());
     result->landmarks.reserve(keep.size());
     result->masks.reserve(keep.size());
-    double mask_prob_threshold = 0.7;
     for (auto i : keep) {
         DetectedObject desc;
         desc.confidence = static_cast<float>(scores[i]);
@@ -358,8 +364,8 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         desc.y = static_cast<float>(bboxes[i].top / scale_y);
         desc.width = static_cast<float>(bboxes[i].getWidth() / scale_x);
         desc.height = static_cast<float>(bboxes[i].getHeight() / scale_y);
-        desc.labelID = (masks[i] > mask_prob_threshold) && shouldDetectMasks ? 1 : 0;
-        desc.label = desc.labelID ? "No Mask" : "Mask" ;
+        desc.labelID = shouldDetectMasks ? (masks[i] > maskThreshold) : 0;
+        desc.label = labels[desc.labelID];
         result->objects.push_back(desc);
 
         /** scaling landmarks coordinates **/

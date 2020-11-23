@@ -213,7 +213,7 @@ int main(int argc, char *argv[]) {
             model.reset(new ModelYolo3(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, FLAGS_yolo_af, (float)FLAGS_iou_t, labels));
         }
         else if (FLAGS_at == "retina") {
-            model.reset(new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, true, labels));
+            model.reset(new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize));
         }
         else {
             slog::err << "No model type or invalid model type (-at) provided: " + FLAGS_at << slog::endl;
