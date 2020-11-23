@@ -43,7 +43,7 @@ public:
 
 public:
     static const int LANDMARKS_NUM = 5;
-    static const int DEFAULT_NUM_FACES = 1000;
+    static const int INIT_VECTOR_SIZE = 32;
     /// Loads model and performs required initialization
     /// @param model_name name of model to load
     /// @param cnnConfig - fine tuning configuration for CNN model
@@ -58,12 +58,13 @@ public:
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
     ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize,
         bool shouldDetectMasks = false, const std::vector<std::string>& labels = std::vector<std::string>());
-    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult);
+    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult); // TODO: del labels
 
 protected:
 
     double landmarkStd;
-    bool shouldDetectMasks = false;
+    double mask_prob_threshold = 0.7;
+    bool shouldDetectMasks;
     enum EOutputType {
         OT_BBOX,
         OT_SCORES,
@@ -78,7 +79,5 @@ protected:
 
     void generateAnchorsFpn();
     virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork);
-
-
 };
 

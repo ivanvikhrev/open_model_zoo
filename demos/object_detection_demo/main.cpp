@@ -167,7 +167,7 @@ cv::Mat renderDetectionData(const DetectionResult& result) {
     for (auto obj : result.objects) {
         std::ostringstream conf;
         conf << ":" << std::fixed << std::setprecision(3) << obj.confidence;
-        cv::putText(outputImg, obj.label + conf.str(),
+        cv::putText(outputImg, std::to_string(obj.labelID) + '.' + obj.label + conf.str(),
             cv::Point2f(obj.x, obj.y - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
             cv::Scalar(0, 0, 255));
         cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
