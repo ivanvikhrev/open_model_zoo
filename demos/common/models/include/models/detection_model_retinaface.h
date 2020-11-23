@@ -58,7 +58,7 @@ public:
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
     ModelRetinaFace(const std::string& model_name, float confidenceThreshold, bool useAutoResize,
         bool shouldDetectMasks = false, const std::vector<std::string>& labels = std::vector<std::string>());
-    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult); // TODO: del labels
+    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult); // TODO: del labels, add thresholds
 
 protected:
 

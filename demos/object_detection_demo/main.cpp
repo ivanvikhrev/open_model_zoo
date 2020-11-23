@@ -167,7 +167,7 @@ cv::Mat renderDetectionData(const DetectionResult& result) {
     for (auto obj : result.objects) {
         std::ostringstream conf;
         conf << ":" << std::fixed << std::setprecision(3) << obj.confidence;
-        cv::putText(outputImg, std::to_string(obj.labelID) + '.' + obj.label + conf.str(),
+        cv::putText(outputImg, obj.label + conf.str(),
             cv::Point2f(obj.x, obj.y - 5), cv::FONT_HERSHEY_COMPLEX_SMALL, 1,
             cv::Scalar(0, 0, 255));
         cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
@@ -212,9 +212,8 @@ int main(int argc, char *argv[]) {
         else if (FLAGS_at == "yolo") {
             model.reset(new ModelYolo3(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, FLAGS_yolo_af, (float)FLAGS_iou_t, labels));
         }
-        else if (FLAGS_at == "retina")
-        {
-            model.reset(new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, false, FLAGS_auto_resize, labels));
+        else if (FLAGS_at == "retina") {
+            model.reset(new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, true, labels));
         }
         else {
             slog::err << "No model type or invalid model type (-at) provided: " + FLAGS_at << slog::endl;

@@ -359,7 +359,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
         desc.width = static_cast<float>(bboxes[i].getWidth() / scale_x);
         desc.height = static_cast<float>(bboxes[i].getHeight() / scale_y);
         desc.labelID = (masks[i] > mask_prob_threshold) && shouldDetectMasks ? 1 : 0;
-        desc.label = "Face";
+        desc.label = desc.labelID ? "No Mask" : "Mask" ;
         result->objects.push_back(desc);
 
         /** scaling landmarks coordinates **/
