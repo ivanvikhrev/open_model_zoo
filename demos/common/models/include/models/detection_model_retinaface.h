@@ -43,7 +43,7 @@ public:
 
 public:
     static const int LANDMARKS_NUM = 5;
-    static const int INIT_VECTOR_SIZE = 32;
+    static const int INIT_VECTOR_SIZE = 200;
     /// Loads model and performs required initialization
     /// @param model_name name of model to load
     /// @param cnnConfig - fine tuning configuration for CNN model

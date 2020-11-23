@@ -305,6 +305,8 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
     bboxes.reserve(INIT_VECTOR_SIZE);
     std::vector<cv::Point2f> landmarks;
     landmarks.reserve(INIT_VECTOR_SIZE);
+    std::vector<size_t> valid_indices;
+    valid_indices.reserve(INIT_VECTOR_SIZE);
     std::vector<double> masks;
     if (shouldDetectMasks) {
         masks.reserve(INIT_VECTOR_SIZE);
@@ -336,7 +338,7 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
                 }
             }
         }
-        std::vector<size_t> valid_indices;
+        valid_indices.clear();
         valid_indices = _get_indices(scores_raw, anchor_num, confidenceThreshold);
         _filter_scores(&scores, valid_indices, scores_raw, anchor_num);
         _filter_bboxes(&bboxes, valid_indices, bbox_deltas, anchor_num, anchors);
