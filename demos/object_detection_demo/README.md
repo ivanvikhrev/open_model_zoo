@@ -93,6 +93,7 @@ object_detection_demo_ssd_async [OPTION]
 Options:
 
     -h                        Print a usage message.
+    -at "<type>"              Required. Architecture type: ssd or yolo
     -i "<path>"               Required. Path to a video file (specify "cam" to work with camera).
     -at "<type>"              Required. Architecture type: ssd or yolo
     -m "<path>"               Required. Path to an .xml file with a trained model.
@@ -111,6 +112,7 @@ Options:
     -loop                     Optional. Enable reading the input in a loop.
     -no_show                  Optional. Do not show processed video.
     -u                        Optional. List of monitors to show initially.
+    -yolo_af                  Optional. Use advanced postprocessing/filtering algorithm for YOLO.
 ```
 
 Running the application with the empty list of options yields the usage message given above and an error message.
