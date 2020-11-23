@@ -306,7 +306,9 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
     std::vector<cv::Point2f> landmarks;
     landmarks.reserve(INIT_VECTOR_SIZE);
     std::vector<double> masks;
-    masks.reserve(INIT_VECTOR_SIZE);
+    if (shouldDetectMasks) {
+        masks.reserve(INIT_VECTOR_SIZE);
+    }
     for (int idx = 0; idx < anchorCfg.size(); ++idx) {
         auto s = anchorCfg[idx].stride;
         auto anchors_fpn = _anchors_fpn[s];
@@ -356,7 +358,9 @@ std::unique_ptr<ResultBase>  ModelRetinaFace::postprocess(InferenceResult& infRe
 
     result->objects.reserve(keep.size());
     result->landmarks.reserve(keep.size());
-    result->masks.reserve(keep.size());
+    if (shouldDetectMasks) {
+        result->masks.reserve(keep.size());
+    }
     for (auto i : keep) {
         DetectedObject desc;
         desc.confidence = static_cast<float>(scores[i]);
