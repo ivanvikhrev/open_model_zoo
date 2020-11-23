@@ -15,13 +15,18 @@
 */
 
 #pragma once
-#include <samples/ocv_common.hpp>
-#include "metadata.h"
+#include <opencv2/core.hpp>
+#include <inference_engine.hpp>
+#include <map>
+//#include "metadata.h"
+#include "internal_model_data.h"
 
+struct MetaData;
 struct ResultBase {
     virtual ~ResultBase() {}
 
     int64_t frameId = -1;
+
     std::shared_ptr<MetaData> metaData;
     bool IsEmpty() { return frameId < 0; }
 
@@ -35,8 +40,8 @@ struct ResultBase {
 };
 
 struct InferenceResult : public ResultBase {
+    std::shared_ptr<InternalModelData> internalModelData;
     std::map<std::string, InferenceEngine::MemoryBlob::Ptr> outputsData;
-    std::chrono::steady_clock::time_point startTime;
 
     /// Returns pointer to first output blob
     /// This function is a useful addition to direct access to outputs list as many models have only one output

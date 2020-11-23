@@ -14,25 +14,25 @@
 // limitations under the License.
 */
 
-#include "detection_model_ssd.h"
+#include "models/detection_model_ssd.h"
 #include <samples/slog.hpp>
+#include <samples/common.hpp>
 #include <ngraph/ngraph.hpp>
 
 using namespace InferenceEngine;
 
 ModelSSD::ModelSSD(const std::string& modelFileName,
     float confidenceThreshold, bool useAutoResize,
-    const std::vector<std::string>& labels)
-    :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels) {
+    const std::vector<std::string>& labels) :
+    DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels) {
 }
 
-void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, RequestsPool* requestsPool)
-{
-    DetectionModel::onLoadCompleted(execNetwork, requestsPool);
+void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, const std::vector<InferenceEngine::InferRequest::Ptr>& requests) {
+    DetectionModel::onLoadCompleted(execNetwork, requests);
 
     // --- Setting image info for every request in a pool. We can do it once and reuse this info at every submit -------
-    if (inputsNames.size()>1) {
-        for (auto &request : requestsPool->getInferRequestsList()) {
+    if (inputsNames.size() > 1) {
+        for (auto &request : requests) {
             auto blob = request->GetBlob(inputsNames[1]);
             LockedMemory<void> blobMapped = as<MemoryBlob>(blob)->wmap();
             auto data = blobMapped.as<float *>();
@@ -43,8 +43,7 @@ void ModelSSD::onLoadCompleted(InferenceEngine::ExecutableNetwork* execNetwork, 
     }
 }
 
-std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
-{
+std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult) {
     LockedMemory<const void> outputMapped = infResult.getFirstOutputBlob()->rmap();
     const float *detections = outputMapped.as<float*>();
 
@@ -53,10 +52,9 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
 
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
 
-    auto sz = infResult.metaData->asRef<ImageMetaData>().img.size();
+    const auto& internalData = infResult.internalModelData->asRef<InternalImageModelData>();
 
     for (size_t i = 0; i < maxProposalCount; i++) {
-
         float image_id = detections[i * objectSize + 0];
         if (image_id < 0) {
             break;
@@ -69,10 +67,10 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
             desc.confidence = confidence;
             desc.labelID = static_cast<int>(detections[i * objectSize + 1]);
             desc.label = getLabelName(desc.labelID);
-            desc.x = detections[i * objectSize + 3] * sz.width;
-            desc.y = detections[i * objectSize + 4] * sz.height;
-            desc.width = detections[i * objectSize + 5] * sz.width - desc.x;
-            desc.height = detections[i * objectSize + 6] * sz.height - desc.y;
+            desc.x = detections[i * objectSize + 3] * internalData.inputImgWidth;
+            desc.y = detections[i * objectSize + 4] * internalData.inputImgHeight;
+            desc.width = detections[i * objectSize + 5] * internalData.inputImgWidth - desc.x;
+            desc.height = detections[i * objectSize + 6] * internalData.inputImgHeight - desc.y;
 
             /** Filtering out objects with confidence < confidence_threshold probability **/
             result->objects.push_back(desc);
@@ -82,13 +80,13 @@ std::unique_ptr<ResultBase> ModelSSD::postprocess(InferenceResult& infResult)
     return retVal;
 }
 
-void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
-    // --------------------------- Configure input & output ---------------------------------------------
-    // --------------------------- Prepare input blobs -----------------------------------------------------
+void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
+    // --------------------------- Configure input & output -------------------------------------------------
+    // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
     InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
 
-    for (const auto & inputInfoItem : inputInfo) {
+    for (const auto& inputInfoItem : inputInfo) {
         if (inputInfoItem.second->getTensorDesc().getDims().size() == 4) {  // 1st input contains images
             if (inputsNames.empty()) {
                 inputsNames.push_back(inputInfoItem.first);
@@ -150,6 +148,7 @@ void ModelSSD::prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork){
     else {
         throw std::logic_error("This demo requires IR version no older than 10");
     }
+
     if (labels.size()) {
         if (static_cast<int>(labels.size()) == (num_classes - 1)) {  // if network assumes default "background" class, having no label
             labels.insert(labels.begin(), "fake");

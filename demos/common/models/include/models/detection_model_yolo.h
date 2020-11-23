@@ -16,11 +16,17 @@
 
 #pragma once
 #include "detection_model.h"
-#include <ngraph/ngraph.hpp>
 
-class ModelYolo3 :
-    public DetectionModel
-{
+namespace ngraph {
+    namespace op {
+        namespace v0 {
+            class RegionYolo;
+        }
+        using v0::RegionYolo;
+    }
+}
+
+class ModelYolo3 : public DetectionModel {
 protected:
     class Region {
     public:
@@ -39,19 +45,21 @@ public:
     /// Any detected object with confidence lower than this threshold will be ignored.
     /// @param useAutoResize - if true, image will be resized by IE.
     /// Otherwise, image will be preprocessed and resized using OpenCV routines.
+    /// @param useAdvancedPostprocessing - if true, an advanced algorithm for filtering/postprocessing will be used
+    /// (with better processing of multiple crossing objects). Otherwise, classic algorithm will be used.
     /// @param boxIOUThreshold - threshold to treat separate output regions as one object for filtering
     /// during postprocessing (only one of them should stay). The default value is 0.4
     /// @param labels - array of labels for every class. If this array is empty or contains less elements
     /// than actual classes number, default "Label #N" will be shown for missing items.
     ModelYolo3(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize,
-        float boxIOUThreshold = 0.4, const std::vector<std::string>& labels = std::vector<std::string>());
+        bool useAdvancedPostprocessing = false, float boxIOUThreshold = 0.4, const std::vector<std::string>& labels = std::vector<std::string>());
 
-    std::unique_ptr<ResultBase> postprocess(InferenceResult & infResult) override;
+    std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) override;
 
 protected:
-    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork & cnnNetwork) override;
+    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) override;
 
-    void parseYOLOV3Output(const std::string & output_name, const InferenceEngine::Blob::Ptr & blob,
+    void parseYOLOV3Output(const std::string& output_name, const InferenceEngine::Blob::Ptr& blob,
         const unsigned long resized_im_h, const unsigned long resized_im_w, const unsigned long original_im_h,
         const unsigned long original_im_w, std::vector<DetectedObject>& objects);
 
@@ -60,5 +68,5 @@ protected:
 
     std::map<std::string, Region> regions;
     double boxIOUThreshold;
-
+    bool useAdvancedPostprocessing;
 };

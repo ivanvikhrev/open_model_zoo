@@ -19,23 +19,21 @@
 #include <deque>
 #include <map>
 #include <condition_variable>
-#include "config_factory.h"
-#include "requests_pool.h"
-#include "results.h"
-#include "model_base.h"
-#include "samples/performance_metrics.hpp"
+#include "pipelines/config_factory.h"
+#include "pipelines/requests_pool.h"
+#include "models/results.h"
+#include "models/model_base.h"
 
 /// This is base class for asynchronous pipeline
 /// Derived classes should add functions for data submission and output processing
-class AsyncPipeline
-{
+class AsyncPipeline {
 public:
     /// Loads model and performs required initialization
     /// @param modelInstance pointer to model object. Object it points to should not be destroyed manually after passing pointer to this function.
     /// @param cnnConfig - fine tuning configuration for CNN model
     /// @param engine - reference to InferenceEngine::Core instance to use.
     /// If it is omitted, new instance of InferenceEngine::Core will be created inside.
-    AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine);
+    AsyncPipeline(std::unique_ptr<ModelBase>&& modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine);
     virtual ~AsyncPipeline();
 
     /// Waits until either output data becomes available or pipeline allows to submit more input data.
@@ -48,57 +46,40 @@ public:
     /// and next frame can be submitted for processing, false otherwise.
     bool isReadyToProcess() { return requestsPool->isIdleRequestAvailable(); }
 
-    /// Returns performance metrics
-    /// @returns performance metrics structure
-    const PerformanceMetrics getMetrics() const { return perfMetrics; }
-
     /// Waits for all currently submitted requests to be completed.
     ///
     void waitForTotalCompletion() { if (requestsPool) requestsPool->waitForTotalCompletion(); }
 
-    /// Submit request to network
-    /// @param image - image to submit for processing
+    /// Submits data to the network for inference
+    /// @param inputData - input data to be submitted
+    /// @param metaData - shared pointer to metadata container.
+    /// Might be null. This pointer will be passed through pipeline and put to the final result structure.
     /// @returns -1 if image cannot be scheduled for processing (there's no free InferRequest available).
     /// Otherwise returns unique sequential frame ID for this particular request. Same frame ID will be written in the response structure.
-    virtual int64_t submitImage(cv::Mat img);
+    virtual int64_t submitData(const InputData& inputData, const std::shared_ptr<MetaData>& metaData);
 
     /// Gets available data from the queue
     /// Function will treat results as ready only if next sequential result (frame) is ready.
     virtual std::unique_ptr<ResultBase> getResult();
 
 protected:
-    /// Submit request to network
-    /// @param request - request to be submitted (caller function should obtain it using getIdleRequest)
-    /// @param metaData - additional source data. This is optional transparent data not used in inference process directly.
-    /// It is passed to inference result directly and can be used in postprocessing.
-    /// @returns unique sequential frame ID for this particular request. Same frame ID will be written in the responce structure.
-    virtual int64_t submitRequest(const InferenceEngine::InferRequest::Ptr& request,const std::shared_ptr<MetaData>& metaData);
-
     /// Returns processed result, if available
     /// Function will treat results as ready only if next sequential result (frame) is ready.
     /// @returns InferenceResult with processed information or empty InferenceResult (with negative frameID) if there's no any results yet.
     virtual InferenceResult getInferenceResult();
 
-protected:
     std::unique_ptr<RequestsPool> requestsPool;
     std::unordered_map<int64_t, InferenceResult> completedInferenceResults;
 
     InferenceEngine::ExecutableNetwork execNetwork;
 
-    PerformanceMetrics perfMetrics;
-
     std::mutex mtx;
     std::condition_variable condVar;
 
-    int64_t inputFrameId=0;
-    int64_t outputFrameId=0;
+    int64_t inputFrameId = 0;
+    int64_t outputFrameId = 0;
 
     std::exception_ptr callbackException = nullptr;
-
-    /// Callback firing after request is processed by CNN
-    /// NOTE: this callback is executed in separate inference engine's thread
-    /// So it should not block execution for long time and should use data synchroniztion
-    virtual void onProcessingCompleted(InferenceEngine::InferRequest::Ptr request) {}
 
     std::unique_ptr<ModelBase> model;
 };

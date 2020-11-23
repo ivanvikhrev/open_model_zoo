@@ -15,11 +15,29 @@
 */
 
 #pragma once
+#include <samples/ocv_common.hpp>
 
-#include <opencv2/core.hpp>
-#include "results.h"
+struct MetaData {
+    virtual ~MetaData() {}
 
-namespace DefaultRenderers {
-    cv::Mat renderDetectionData(const DetectionResult& result);
-    cv::Mat renderSegmentationData(const SegmentationResult& result);
-}
+    template<class T> T& asRef() {
+        return dynamic_cast<T&>(*this);
+    }
+
+    template<class T> const T& asRef() const {
+        return dynamic_cast<const T&>(*this);
+    }
+};
+
+struct ImageMetaData : public MetaData {
+    cv::Mat img;
+    std::chrono::steady_clock::time_point timeStamp;
+
+    ImageMetaData() {
+    }
+
+    ImageMetaData(cv::Mat img, std::chrono::steady_clock::time_point timeStamp):
+        img(img),
+        timeStamp(timeStamp) {
+    }
+};

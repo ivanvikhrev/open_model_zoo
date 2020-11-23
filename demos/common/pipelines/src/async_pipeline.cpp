@@ -14,15 +14,15 @@
 // limitations under the License.
 */
 
-#include "async_pipeline.h"
-#include <samples/args_helper.hpp>
+#include "pipelines/async_pipeline.h"
 #include <cldnn/cldnn_config.hpp>
+#include <samples/common.hpp>
 #include <samples/slog.hpp>
 
 using namespace InferenceEngine;
 
-AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
-    model(std::move(modelInstance)){
+AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase>&& modelInstance, const CnnConfig& cnnConfig, InferenceEngine::Core& engine) :
+    model(std::move(modelInstance)) {
 
     // --------------------------- 1. Load inference engine ------------------------------------------------
     slog::info << "Loading Inference Engine" << slog::endl;
@@ -65,14 +65,14 @@ AsyncPipeline::AsyncPipeline(std::unique_ptr<ModelBase> modelInstance, const Cnn
     requestsPool.reset(new RequestsPool(execNetwork, cnnConfig.maxAsyncRequests));
 
     // --------------------------- 6. Call onLoadCompleted to complete initialization of model -------------
-    model->onLoadCompleted(&execNetwork, requestsPool.get());
+    model->onLoadCompleted(&execNetwork, requestsPool->getInferRequestsList());
 }
 
-AsyncPipeline::~AsyncPipeline(){
+AsyncPipeline::~AsyncPipeline() {
     waitForTotalCompletion();
 }
 
-void AsyncPipeline::waitForData(){
+void AsyncPipeline::waitForData() {
     std::unique_lock<std::mutex> lock(mtx);
 
     condVar.wait(lock, [&] {return callbackException != nullptr ||
@@ -84,14 +84,19 @@ void AsyncPipeline::waitForData(){
         std::rethrow_exception(callbackException);
 }
 
-int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& request, const std::shared_ptr<MetaData>& metaData){
-    auto frameStartTime = std::chrono::steady_clock::now();
+int64_t AsyncPipeline::submitData(const InputData& inputData, const std::shared_ptr<MetaData>& metaData){
     auto frameID = inputFrameId;
 
+    auto request = requestsPool->getIdleRequest();
+    if (!request)
+        return -1;
+
+    auto internalModelData = model->preprocess(inputData, request);
+
     request->SetCompletionCallback([this,
-        frameStartTime,
         frameID,
         request,
+        internalModelData,
         metaData] {
             {
                 std::lock_guard<std::mutex> lock(mtx);
@@ -99,17 +104,15 @@ int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& r
                 try {
                     InferenceResult result;
 
-                    result.startTime = frameStartTime;
-
                     result.frameId = frameID;
                     result.metaData = std::move(metaData);
+                    result.internalModelData = std::move(internalModelData);
+
                     for (const auto& outName : model->getOutputsNames())
                         result.outputsData.emplace(outName, std::make_shared<TBlob<float>>(*as<TBlob<float>>(request->GetBlob(outName))));
 
                     completedInferenceResults.emplace(frameID, result);
                     this->requestsPool->setRequestIdle(request);
-
-                    this->onProcessingCompleted(request);
                 }
                 catch (...) {
                     if (!this->callbackException) {
@@ -120,7 +123,7 @@ int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& r
             condVar.notify_one();
     });
 
-    inputFrameId++;
+    ++inputFrameId;
     if (inputFrameId < 0)
         inputFrameId = 0;
 
@@ -128,45 +131,26 @@ int64_t AsyncPipeline::submitRequest(const InferenceEngine::InferRequest::Ptr& r
     return frameID;
 }
 
-int64_t AsyncPipeline::submitImage(cv::Mat img) {
-    auto request = requestsPool->getIdleRequest();
-    if (!request)
-        return -1;
-
-    std::shared_ptr<MetaData> md;
-    model->preprocess(ImageInputData(img), request, md);
-
-    return submitRequest(request, md);
-}
-
-std::unique_ptr<ResultBase> AsyncPipeline::getResult()
-{
+std::unique_ptr<ResultBase> AsyncPipeline::getResult() {
     auto infResult = AsyncPipeline::getInferenceResult();
     if (infResult.IsEmpty()) {
         return std::unique_ptr<ResultBase>();
     }
 
     auto result = model->postprocess(infResult);
-
     *result = static_cast<ResultBase&>(infResult);
-
-    // Updating performance info
-    perfMetrics.update(infResult.startTime);
 
     return result;
 }
 
-InferenceResult AsyncPipeline::getInferenceResult()
-{
+InferenceResult AsyncPipeline::getInferenceResult() {
     InferenceResult retVal;
-
     {
         std::lock_guard<std::mutex> lock(mtx);
 
         const auto& it = completedInferenceResults.find(outputFrameId);
 
-        if (it != completedInferenceResults.end())
-        {
+        if (it != completedInferenceResults.end()) {
             retVal = std::move(it->second);
             completedInferenceResults.erase(it);
         }
@@ -174,7 +158,7 @@ InferenceResult AsyncPipeline::getInferenceResult()
 
     if(!retVal.IsEmpty()) {
         outputFrameId = retVal.frameId;
-        outputFrameId++;
+        ++outputFrameId;
         if (outputFrameId < 0)
             outputFrameId = 0;
     }

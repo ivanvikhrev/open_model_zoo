@@ -14,20 +14,23 @@
 // limitations under the License.
 */
 
-#include "detection_model_yolo.h"
+#include "models/detection_model_yolo.h"
 #include <samples/slog.hpp>
+#include <samples/common.hpp>
+#include <ngraph/ngraph.hpp>
 
 using namespace InferenceEngine;
 
 ModelYolo3::ModelYolo3(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize,
-    float boxIOUThreshold, const std::vector<std::string>& labels)
-    :DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels),
-    boxIOUThreshold(boxIOUThreshold){
+    bool useAdvancedPostprocessing, float boxIOUThreshold, const std::vector<std::string>& labels) :
+    DetectionModel(modelFileName, confidenceThreshold, useAutoResize, labels),
+    boxIOUThreshold(boxIOUThreshold),
+    useAdvancedPostprocessing(useAdvancedPostprocessing) {
 }
 
 void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
-    // --------------------------- Configure input & output ---------------------------------------------
-    // --------------------------- Prepare input blobs -----------------------------------------------------
+    // --------------------------- Configure input & output -------------------------------------------------
+    // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
     InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
     if (inputInfo.size() != 1) {
@@ -66,10 +69,10 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
                 auto regionYolo = std::dynamic_pointer_cast<ngraph::op::RegionYolo>(op);
                 if (!regionYolo) {
                     throw std::runtime_error("Invalid output type: " +
-                        std::string(regionYolo->get_type_info().name) + ". RegionYolo expected");
+                        std::string(op->get_type_info().name) + ". RegionYolo expected");
                 }
 
-                regions.emplace(outputLayer->first, Region(regionYolo));;
+                regions.emplace(outputLayer->first, Region(regionYolo));
             }
         }
     }
@@ -77,43 +80,56 @@ void ModelYolo3::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) {
         throw std::runtime_error("Can't get ngraph::Function. Make sure the provided model is in IR version 10 or greater.");
     }
 
-    if (!(this->labels).empty() &&
-        static_cast<int>(labels.size()) != regions.begin()->second.classes) {
+    if (!this->labels.empty() && static_cast<int>(labels.size()) != regions.begin()->second.classes) {
         throw std::runtime_error(std::string("The number of labels (") + std::to_string(labels.size()) +
             ") is different from numbers of model classes (" + std::to_string(regions.begin()->second.classes) + ")");
     }
 }
 
-std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult & infResult)
-{
+std::unique_ptr<ResultBase> ModelYolo3::postprocess(InferenceResult & infResult) {
     DetectionResult* result = new DetectionResult;
 
     *static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
     std::vector<DetectedObject> objects;
 
     // Parsing outputs
-    auto& srcImg = infResult.metaData->asRef<ImageMetaData>().img;
+    const auto& internalData = infResult.internalModelData->asRef<InternalImageModelData>();
+
     for (auto& output : infResult.outputsData) {
         this->parseYOLOV3Output(output.first, output.second, netInputHeight, netInputWidth,
-            srcImg.rows, srcImg.cols, objects);
+            internalData.inputImgHeight, internalData.inputImgWidth, objects);
     }
 
-    //--- Checking IOU threshold conformance
-    // For every i-th object we're finding all objects it intersects with, and comparing confidence
-    // If i-th object has greater confidence than all others, we include it into result
-    for (const auto& obj1 : objects) {
-        bool isGoodResult = true;
-        for (const auto& obj2 : objects) {
-            if (obj1.confidence < obj2.confidence && intersectionOverUnion(obj1, obj2) >= boxIOUThreshold) // if obj1 is the same as obj2, condition expression will evaluate to false anyway
-            {
-                isGoodResult = false;
-                break;
+    if (useAdvancedPostprocessing) {
+        // Advanced postprocessing
+        // Checking IOU threshold conformance
+        // For every i-th object we're finding all objects it intersects with, and comparing confidence
+        // If i-th object has greater confidence than all others, we include it into result
+        for (const auto& obj1 : objects) {
+            bool isGoodResult = true;
+            for (const auto& obj2 : objects) {
+                if (obj1.labelID == obj2.labelID && obj1.confidence < obj2.confidence && intersectionOverUnion(obj1, obj2) >= boxIOUThreshold) { // if obj1 is the same as obj2, condition expression will evaluate to false anyway
+                    isGoodResult = false;
+                    break;
+                }
+            }
+            if (isGoodResult) {
+                result->objects.push_back(obj1);
             }
         }
-        if (isGoodResult) {
-            result->objects.push_back(obj1);
+    } else {
+        // Classic postprocessing
+        std::sort(objects.begin(), objects.end(), [](const DetectedObject& x, const DetectedObject& y) { return x.confidence > y.confidence; });
+        for (size_t i = 0; i < objects.size(); ++i) {
+            if (objects[i].confidence == 0)
+                continue;
+            for (size_t j = i + 1; j < objects.size(); ++j)
+                if (intersectionOverUnion(objects[i], objects[j]) >= boxIOUThreshold)
+                    objects[j].confidence = 0;
+            result->objects.push_back(objects[i]);
         }
     }
+
     return std::unique_ptr<ResultBase>(result);
 }
 
@@ -133,7 +149,7 @@ void ModelYolo3::parseYOLOV3Output(const std::string& output_name,
 
     // --------------------------- Extracting layer parameters -------------------------------------
     auto it = regions.find(output_name);
-    if(it==regions.end()){
+    if(it == regions.end()) {
         throw std::runtime_error(std::string("Can't find output layer with name ") + output_name);
     }
     auto& region = it->second;
@@ -158,13 +174,13 @@ void ModelYolo3::parseYOLOV3Output(const std::string& output_name,
                 double x = (col + output_blob[box_index + 0 * side_square]) / side * original_im_w;
                 double y = (row + output_blob[box_index + 1 * side_square]) / side * original_im_h;
                 double height = std::exp(output_blob[box_index + 3 * side_square]) * region.anchors[2 * n + 1] * original_im_h / resized_im_h;
-                double width = std::exp(output_blob[box_index + 2 * side_square]) * region.anchors[2 * n]* original_im_w / resized_im_w;
+                double width = std::exp(output_blob[box_index + 2 * side_square]) * region.anchors[2 * n] * original_im_w / resized_im_w;
 
                 DetectedObject obj;
                 obj.x = (float)(x-width/2);
                 obj.y = (float)(y-height/2);
-                obj.width = (float)width;
-                obj.height = (float)height;
+                obj.width = (float)(width);
+                obj.height = (float)(height);
 
                 for (int j = 0; j < region.classes; ++j) {
                     int class_index = calculateEntryIndex(side, region.coords, region.classes, n * side_square + i, region.coords + 1 + j);
@@ -189,18 +205,15 @@ int ModelYolo3::calculateEntryIndex(int side, int lcoords, int lclasses, int loc
     return n * side * side * (lcoords + lclasses + 1) + entry * side * side + loc;
 }
 
-double ModelYolo3::intersectionOverUnion(
-    const DetectedObject& o1, const DetectedObject& o2) {
-
-    double overlappingWidth = fmin(o1.x+o1.width, o2.x+o2.width) - fmax(o1.x, o2.x);
+double ModelYolo3::intersectionOverUnion(const DetectedObject& o1, const DetectedObject& o2) {
+    double overlappingWidth = fmin(o1.x + o1.width, o2.x + o2.width) - fmax(o1.x, o2.x);
     double overlappingHeight = fmin(o1.y + o1.height, o2.y + o2.height) - fmax(o1.y, o2.y);
     double intersectionArea = (overlappingWidth < 0 || overlappingHeight < 0) ? 0 : overlappingHeight * overlappingWidth;
-    double unionArea = o1.width*o1.height + o2.width*o2.height - intersectionArea;
+    double unionArea = o1.width * o1.height + o2.width * o2.height - intersectionArea;
     return intersectionArea / unionArea;
 }
 
-ModelYolo3::Region::Region(const std::shared_ptr<ngraph::op::RegionYolo>& regionYolo)
-{
+ModelYolo3::Region::Region(const std::shared_ptr<ngraph::op::RegionYolo>& regionYolo) {
     coords = regionYolo->get_num_coords();
     classes = regionYolo->get_num_classes();
     auto mask = regionYolo->get_mask();

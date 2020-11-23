@@ -15,12 +15,10 @@
 */
 
 #pragma once
-#include <samples/ocv_common.hpp>
+struct InternalModelData {
+   virtual ~InternalModelData(){}
 
-struct InputData {
-    virtual ~InputData() {}
-
-    template<class T> T& asRef() {
+   template<class T> T& asRef() {
         return dynamic_cast<T&>(*this);
     }
 
@@ -29,11 +27,12 @@ struct InputData {
     }
 };
 
-struct ImageInputData : public InputData{
-    cv::Mat inputImage;
-
-    ImageInputData() {}
-    ImageInputData(const cv::Mat& img) {
-        inputImage = img;
+struct InternalImageModelData : public InternalModelData {
+    InternalImageModelData(int width, int height) {
+        inputImgWidth = width;
+        inputImgHeight = height;
     }
+
+    int inputImgWidth;
+    int inputImgHeight;
 };

@@ -15,10 +15,10 @@
 */
 
 #pragma once
-#include <samples/ocv_common.hpp>
+#include <opencv2/core.hpp>
 
-struct MetaData {
-    virtual ~MetaData() {}
+struct InputData {
+    virtual ~InputData() {}
 
     template<class T> T& asRef() {
         return dynamic_cast<T&>(*this);
@@ -29,13 +29,11 @@ struct MetaData {
     }
 };
 
-struct ImageMetaData : public MetaData {
-    cv::Mat img;
+struct ImageInputData : public InputData {
+    cv::Mat inputImage;
 
-    ImageMetaData() {
-    }
-
-    ImageMetaData(cv::Mat img){
-        this->img = img;
+    ImageInputData() {}
+    ImageInputData(const cv::Mat& img) {
+        inputImage = img;
     }
 };

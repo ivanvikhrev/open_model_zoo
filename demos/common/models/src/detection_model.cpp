@@ -14,21 +14,20 @@
 // limitations under the License.
 */
 
-#include "detection_model.h"
-#include <samples/args_helper.hpp>
+#include "models/detection_model.h"
+#include <samples/ocv_common.hpp>
 #include <samples/slog.hpp>
 
 using namespace InferenceEngine;
 
-DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels)
-    :ModelBase(modelFileName),
+DetectionModel::DetectionModel(const std::string& modelFileName, float confidenceThreshold, bool useAutoResize, const std::vector<std::string>& labels) :
+    ModelBase(modelFileName),
     labels(labels),
     useAutoResize(useAutoResize),
     confidenceThreshold(confidenceThreshold) {
 }
 
-void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request, std::shared_ptr<MetaData>& metaData)
-{
+std::shared_ptr<InternalModelData> DetectionModel::preprocess(const InputData& inputData, InferenceEngine::InferRequest::Ptr& request) {
     auto& img = inputData.asRef<ImageInputData>().inputImage;
 
     if (useAutoResize) {
@@ -41,12 +40,12 @@ void DetectionModel::preprocess(const InputData& inputData, InferenceEngine::Inf
         matU8ToBlob<uint8_t>(img, frameBlob);
     }
 
-    metaData = std::make_shared<ImageMetaData>(img);
+    return std::shared_ptr<InternalModelData>(new InternalImageModelData(img.cols, img.rows));
 }
 
-
-std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFilename){
+std::vector<std::string> DetectionModel::loadLabels(const std::string& labelFilename) {
     std::vector<std::string> labelsList;
+
     /** Read labels (if any)**/
     if (!labelFilename.empty()) {
         std::ifstream inputFile(labelFilename);
@@ -57,5 +56,6 @@ std::vector<std::string> DetectionModel::loadLabels(const std::string & labelFil
         if (labelsList.empty())
             throw std::logic_error("File empty or not found: " + labelFilename);
     }
+
     return labelsList;
 }
