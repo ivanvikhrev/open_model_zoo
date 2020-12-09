@@ -42,6 +42,7 @@
 #include "pipelines/metadata.h"
 #include "models/detection_model_yolo.h"
 #include "models/detection_model_ssd.h"
+#include "models/detection_model_retinaface.h"
 
 static const char help_message[] = "Print a usage message.";
 static const char at_message[] = "Required. Architecture type: ssd or yolo";
@@ -99,7 +100,6 @@ static void showUsage() {
     std::cout << "Options:" << std::endl;
     std::cout << std::endl;
     std::cout << "    -h                        " << help_message << std::endl;
-    std::cout << "    -at \"<type>\"              " << at_message << std::endl;
     std::cout << "    -i \"<path>\"               " << video_message << std::endl;
     std::cout << "    -at \"<type>\"              " << at_message << std::endl;
     std::cout << "    -m \"<path>\"               " << model_message << std::endl;
@@ -170,6 +170,13 @@ cv::Mat renderDetectionData(const DetectionResult& result) {
         cv::rectangle(outputImg, obj, cv::Scalar(0, 0, 255));
     }
 
+    try {
+        for (auto lmark : result.asRef<RetinaFaceDetectionResult>().landmarks) {
+            cv::circle(outputImg, lmark, 2, cv::Scalar(0, 255, 255), -1);
+        }
+    }
+    catch (...) {}
+
     return outputImg;
 }
 
@@ -201,6 +208,9 @@ int main(int argc, char *argv[]) {
         }
         else if (FLAGS_at == "yolo") {
             model.reset(new ModelYolo3(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, FLAGS_yolo_af, (float)FLAGS_iou_t, labels));
+        }
+        else if (FLAGS_at == "retina") {
+            model.reset(new ModelRetinaFace(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize));
         }
         else {
             slog::err << "No model type or invalid model type (-at) provided: " + FLAGS_at << slog::endl;
