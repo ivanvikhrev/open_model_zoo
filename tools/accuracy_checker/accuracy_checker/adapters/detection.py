@@ -44,8 +44,11 @@ class TFObjectDetectionAPIAdapter(Adapter):
     """
     __provider__ = 'tf_object_detection'
 
-    def validate_config(self):
-        super().validate_config(on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT)
+    @classmethod
+    def validate_config(cls, config, fetch_only=False, **kwargs):
+        return super().validate_config(
+            config, fetch_only=fetch_only, on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT
+        )
 
     @classmethod
     def parameters(cls):
@@ -233,8 +236,11 @@ class ClassAgnosticDetectionAdapter(Adapter):
     __provider__ = 'class_agnostic_detection'
     prediction_types = (DetectionPrediction,)
 
-    def validate_config(self):
-        super().validate_config(on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT)
+    @classmethod
+    def validate_config(cls, config, fetch_only=False, **kwargs):
+        return super().validate_config(
+            config, fetch_only=fetch_only, on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT
+        )
 
     @classmethod
     def parameters(cls):
@@ -419,8 +425,11 @@ class FaceBoxesAdapter(Adapter):
     """
     __provider__ = 'faceboxes'
 
-    def validate_config(self):
-        super().validate_config(on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT)
+    @classmethod
+    def validate_config(cls, config, fetch_only=False, **kwargs):
+        return super().validate_config(
+            config, fetch_only=fetch_only, on_extra_argument=ConfigValidator.ERROR_ON_EXTRA_ARGUMENT
+        )
 
     @classmethod
     def parameters(cls):
@@ -435,6 +444,7 @@ class FaceBoxesAdapter(Adapter):
     def configure(self):
         self.scores_out = self.get_value_from_config('scores_out')
         self.boxes_out = self.get_value_from_config('boxes_out')
+        self._anchors_cache = {}
 
         # Set default values
         self.min_sizes = [[32, 64, 128], [256], [512]]
@@ -505,9 +515,13 @@ class FaceBoxesAdapter(Adapter):
             image_info = meta.get("image_info")[0:2]
 
             # Prior boxes
-            feature_maps = [[math.ceil(image_info[0] / step), math.ceil(image_info[1] / step)] for step in
-                            self.steps]
-            prior_data = self.prior_boxes(feature_maps, image_info)
+            if (image_info[0], image_info[1]) not in self._anchors_cache:
+                feature_maps = [[math.ceil(image_info[0] / step), math.ceil(image_info[1] / step)] for step in
+                                self.steps]
+                prior_data = self.prior_boxes(feature_maps, image_info)
+                self._anchors_cache[(image_info[0], image_info[1])] = prior_data
+            else:
+                prior_data = self._anchors_cache[(image_info[0], image_info[1])]
 
             # Boxes
             boxes[:, :2] = self.variance[0] * boxes[:, :2]

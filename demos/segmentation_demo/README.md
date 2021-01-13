@@ -1,5 +1,7 @@
 # Image Segmentation C++ Demo
 
+![](./segmentation.gif)
+
 This topic demonstrates how to run the Image Segmentation demo application, which does inference using semantic segmentation networks.
 
 > **NOTE:** This topic describes usage of C++ implementation of the Image Segmentation Demo. For the Python* implementation, refer to [Image Segmentation Python* Demo](../python_demos/segmentation_demo/README.md).
@@ -22,7 +24,7 @@ segmentation_demo [OPTION]
 Options:
 
     -h                        Print a usage message.
-    -i "<path>"               Required. Path to a video file (specify "cam" to work with camera).
+    -i "<path>"               Required. An input to process. The input must be a single image, a folder of images or anything that cv::VideoCapture can process.
     -m "<path>"               Required. Path to an .xml file with a trained model.
       -l "<absolute_path>"    Required for CPU custom layers. Absolute path to a shared library with the kernel implementations.
           Or

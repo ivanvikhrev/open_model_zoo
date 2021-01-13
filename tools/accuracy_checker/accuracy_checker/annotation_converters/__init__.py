@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 from .format_converter import BaseFormatConverter
-from .convert import make_subset, save_annotation, analyze_dataset
+from .convert import make_subset, save_annotation, analyze_dataset, DatasetConversionInfo
 from .market1501 import Market1501Converter
 from .veri776 import VeRi776Converter
 from .mars import MARSConverter
@@ -43,7 +43,7 @@ from .cifar import CifarFormatConverter
 from .mnist import MNISTCSVFormatConverter
 from .wmt import WMTConverter
 from .common_semantic_segmentation import CommonSegmentationConverter
-from .camvid import CamVidConverter
+from .camvid import CamVidConverter, CamVid32DatasetConverter
 from .lpr import LPRConverter
 from .image_retrieval import ImageRetrievalConverter
 from .cvat_object_detection import CVATObjectDetectionConverter
@@ -96,9 +96,11 @@ from .ade20k_image_translation import ADE20kImageTranslationConverter
 from .salient_object_detection import SalientObjectDetectionConverter
 from .common_object_detection import CommonDetectionConverter
 from .wflw import WFLWConverter
+from .see_in_the_dark import SeeInTheDarkDatasetConverter
 
 __all__ = [
     'BaseFormatConverter',
+    'DatasetConversionInfo',
     'make_subset',
     'save_annotation',
     'analyze_dataset',
@@ -137,6 +139,7 @@ __all__ = [
     'WMTConverter',
     'CommonSegmentationConverter',
     'CamVidConverter',
+    'CamVid32DatasetConverter',
     'LPRConverter',
     'ImageRetrievalConverter',
     'CVATObjectDetectionConverter',
@@ -183,4 +186,5 @@ __all__ = [
     'SalientObjectDetectionConverter',
     'CommonDetectionConverter',
     'WFLWConverter',
+    'SeeInTheDarkDatasetConverter'
 ]

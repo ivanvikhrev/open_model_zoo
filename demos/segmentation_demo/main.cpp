@@ -40,7 +40,6 @@
 #include <pipelines/metadata.h>
 
 static const char help_message[] = "Print a usage message.";
-static const char video_message[] = "Required. Path to a video file (specify \"cam\" to work with camera).";
 static const char model_message[] = "Required. Path to an .xml file with a trained model.";
 static const char target_device_message[] = "Optional. Specify the target device to infer on (the list of available devices is shown below). "
 "Default value is CPU. Use \"-d HETERO:<comma-separated_devices_list>\" format to specify HETERO plugin. "
@@ -60,7 +59,7 @@ static const char no_show_processed_video[] = "Optional. Do not show processed v
 static const char utilization_monitors_message[] = "Optional. List of monitors to show initially.";
 
 DEFINE_bool(h, false, help_message);
-DEFINE_string(i, "", video_message);
+DEFINE_string(i, "", input_message);
 DEFINE_string(m, "", model_message);
 DEFINE_string(d, "CPU", target_device_message);
 DEFINE_bool(pc, false, performance_counter_message);
@@ -83,7 +82,7 @@ static void showUsage() {
     std::cout << "Options:" << std::endl;
     std::cout << std::endl;
     std::cout << "    -h                        " << help_message << std::endl;
-    std::cout << "    -i \"<path>\"               " << video_message << std::endl;
+    std::cout << "    -i \"<path>\"               " << input_message << std::endl;
     std::cout << "    -m \"<path>\"               " << model_message << std::endl;
     std::cout << "      -l \"<absolute_path>\"    " << custom_cpu_library_message << std::endl;
     std::cout << "          Or" << std::endl;
@@ -121,6 +120,30 @@ bool ParseAndCheckCommandLine(int argc, char *argv[]) {
     return true;
 }
 
+static const Color PASCAL_VOC_COLORS[] = {
+    { 0,   0,   0 },
+    { 128, 0,   0 },
+    { 0,   128, 0 },
+    { 128, 128, 0 },
+    { 0,   0,   128 },
+    { 128, 0,   128 },
+    { 0,   128, 128 },
+    { 128, 128, 128 },
+    { 64,  0,   0 },
+    { 192, 0,   0 },
+    { 64,  128, 0 },
+    { 192, 128, 0 },
+    { 64,  0,   128 },
+    { 192, 0,   128 },
+    { 64,  128, 128 },
+    { 192, 128, 128 },
+    { 0,   64,  0 },
+    { 128, 64,  0 },
+    { 0,   192, 0 },
+    { 128, 192, 0 },
+    { 0,   64,  128 }
+};
+
 cv::Mat applyColorMap(cv::Mat input) {
     // Initializing colors array if needed
     static cv::Mat colors;
@@ -130,8 +153,8 @@ cv::Mat applyColorMap(cv::Mat input) {
     if (colors.empty()) {
         colors = cv::Mat(256, 1, CV_8UC3);
         std::size_t i = 0;
-        for (; i < arraySize(CITYSCAPES_COLORS); ++i) {
-            colors.at<cv::Vec3b>(i, 0) = { CITYSCAPES_COLORS[i].blue(), CITYSCAPES_COLORS[i].green(), CITYSCAPES_COLORS[i].red() };
+        for (; i < arraySize(PASCAL_VOC_COLORS); ++i) {
+            colors.at<cv::Vec3b>(i, 0) = { PASCAL_VOC_COLORS[i].blue(), PASCAL_VOC_COLORS[i].green(), PASCAL_VOC_COLORS[i].red() };
         }
         for (; i < (std::size_t)colors.cols; ++i) {
             colors.at<cv::Vec3b>(i, 0) = cv::Vec3b(distr(rng), distr(rng), distr(rng));

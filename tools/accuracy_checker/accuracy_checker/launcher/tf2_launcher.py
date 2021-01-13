@@ -15,7 +15,7 @@ limitations under the License.
 """
 
 import numpy as np
-from .launcher import Launcher, LauncherConfigValidator
+from .launcher import Launcher
 from ..config import BaseField, ListField, PathField, StringField, ConfigError
 
 
@@ -49,11 +49,7 @@ class TF2Launcher(Launcher):
         self.tf = tensorflow
         self.default_layout = 'NHWC'
         self._delayed_model_loading = kwargs.get('delayed_model_loading', False)
-
-        tf_launcher_config = LauncherConfigValidator(
-            'TF_Launcher', fields=self.parameters(), delayed_model_loading=self._delayed_model_loading
-        )
-        tf_launcher_config.validate(self.config)
+        self.validate_config(config_entry, delayed_model_loading=self._delayed_model_loading)
 
         if not self._delayed_model_loading:
             if 'saved_model_dir' not in self.config:
@@ -93,7 +89,10 @@ class TF2Launcher(Launcher):
     def inputs_info_for_meta(self, feed_dict=None):
         if feed_dict is None:
             return super().inputs_info_for_meta()
-        return {input_name: input_data.shape for input_name, input_data in feed_dict.items()}
+        return {
+            input_name: tuple(input_data.shape)
+            for input_name, input_data in feed_dict.items()
+        }
 
     @property
     def batch(self):

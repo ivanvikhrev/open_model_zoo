@@ -1,5 +1,7 @@
 # Image Retrieval Python\* Demo
 
+![](./image_retrieval.gif)
+
 This demo demonstrates how to run Image Retrieval models using OpenVINO&trade;.
 
 > **NOTE**: Only batch size of 1 is supported.
@@ -38,8 +40,10 @@ Options:
   -h, --help            Show this help message and exit.
   -m MODEL, --model MODEL
                         Required. Path to an .xml file with a trained model.
-  -i I                  Required. Path to a video file or a device node of a
+  -i INPUT, --input INPUT
+                        Required. Path to a video file or a device node of a
                         web-camera.
+  --loop                Optional. Enable reading the input in a loop.
   -g GALLERY, --gallery GALLERY
                         Required. Path to a file listing gallery images.
   -gt GROUND_TRUTH, --ground_truth GROUND_TRUTH
@@ -80,8 +84,6 @@ Examples of videos can be found [here](https://github.com/19900531/test).
 ## Demo Output
 
 The application uses OpenCV to display gallery searching result and current inference performance.
-
-![](./image_retrieval_demo.jpg)
 
 ## See Also
 * [Using Open Model Zoo demos](../../README.md)

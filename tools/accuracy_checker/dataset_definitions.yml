@@ -1123,3 +1123,22 @@ datasets:
       bin_file:  lfw_bin/lfw.bin
       images_dir: lfw_bin/images
       convert_images: True
+
+  - name: imagenet_colorization
+    data_source: ImageNet
+    annotation_conversion:
+      converter: image_processing
+      data_dir: ImageNet
+      input_suffix: .JPEG
+      target_suffix: .JPEG
+      annotation_loader: opencv
+
+  - name: tacotron-io-duration-prediction
+    data_source: forward_tacotron_io
+    reader: numpy_dict_reader
+    annotation_conversion:
+      converter: multi_feature_regression
+      data_dir: forward_tacotron_io
+      prefix: duration_prediction
+      input_suffix: in
+      reference_suffix: out

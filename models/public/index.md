@@ -14,10 +14,11 @@ The models can be downloaded via Model Downloader
 | AlexNet                     | Caffe\*                            | [alexnet](./alexnet/alexnet.md)   | 56.598%/79.812% | 1.5 | 60.965 |
 | AntiSpoofNet                | PyTorch\*                          | [anti-spoof-mn3](./anti-spoof-mn3/anti-spoof-mn3.md) | 3.81% | 0.15 | 3.02 |
 | CaffeNet                    | Caffe\*                            | [caffenet](./caffenet/caffenet.md)  | 56.714%/79.916% | 1.5 | 60.965 |
-| DenseNet 121                | Caffe\*<br>TensorFlow\*<br>Caffe2\*| [densenet-121](./densenet-121/densenet-121.md)<br>[densenet-121-tf](./densenet-121-tf/densenet-121-tf.md)<br>[densenet-121-caffe2](./densenet-121-caffe2/densenet-121-caffe2.md) | 74.42%/92.136%<br>74.29%/91.98% <br>74.904%/92.192% | 5.289~5.724    | 7.971 |
+| DenseNet 121                | Caffe\*<br>TensorFlow\*<br>Caffe2\*| [densenet-121](./densenet-121/densenet-121.md)<br>[densenet-121-tf](./densenet-121-tf/densenet-121-tf.md)<br>[densenet-121-caffe2](./densenet-121-caffe2/densenet-121-caffe2.md) | 74.42%/92.136%<br>74.46%/92.13% <br>74.904%/92.192% | 5.723~5.7287 | 7.971 |
 | DenseNet 161                | Caffe\*<br>TensorFlow\*            | [densenet-161](./densenet-161/densenet-161.md)<br>[densenet-161-tf](./densenet-161-tf/densenet-161-tf.md) | 77.55%/93.92%<br>76.446%/93.228%| 14.128~15.561  | 28.666 |
-| DenseNet 169                | Caffe\*<br>TensorFlow\*            | [densenet-169](./densenet-169/densenet-169.md)<br>[densenet-169-tf](./densenet-169-tf/densenet-169-tf.md) | 76.106%/93.106%<br>75.76%/92.81%| 6.16~6.788 | 14.139 |
-| DenseNet 201                | Caffe\*                            | [densenet-201](./densenet-201/densenet-201.md)| 76.886%/93.556% | 8.673  | 20.001  |
+| DenseNet 169                | Caffe\*<br>TensorFlow\*            | [densenet-169](./densenet-169/densenet-169.md)<br>[densenet-169-tf](./densenet-169-tf/densenet-169-tf.md) | 76.106%/93.106%<br>76.14%/93.12%| 6.788~6.7932 | 14.139 |
+| DenseNet 201                | Caffe\*<br>TensorFlow\*            | [densenet-201](./densenet-201/densenet-201.md)<br>[densenet-201-tf](./densenet-201-tf/densenet-201-tf.md)| 76.886%/93.556%<br>76.93%/93.56% | 8.673~8.6786  | 20.001  |
+| DLA 34                      | PyTorch\*                          | [dla-34](./dla-34/dla-34.md) | 74.64%/92.06% | 6.1368 | 15.7344 |
 | EfficientNet B0             | TensorFlow\*<br>PyTorch\*          | [efficientnet-b0](./efficientnet-b0/efficientnet-b0.md)<br>[efficientnet-b0-pytorch](./efficientnet-b0-pytorch/efficientnet-b0-pytorch.md) | 75.70%/92.76%<br>76.91%/93.21% | 0.819 | 5.268 |
 | EfficientNet B0 AutoAugment | TensorFlow\*                       | [efficientnet-b0_auto_aug](./efficientnet-b0_auto_aug/efficientnet-b0_auto_aug.md) | 76.43%/93.04% | 0.819 | 5.268 |
 | EfficientNet B5             | TensorFlow\*<br>PyTorch\*          | [efficientnet-b5](./efficientnet-b5/efficientnet-b5.md)<br>[efficientnet-b5-pytorch](./efficientnet-b5-pytorch/efficientnet-b5-pytorch.md) | 83.33%/96.67%<br>83.69%/96.71% | 21.252 | 30.303 |
@@ -52,6 +53,7 @@ The models can be downloaded via Model Downloader
 | ResNet 18                   | PyTorch\*                          | [resnet-18-pytorch](./resnet-18-pytorch/resnet-18-pytorch.md) | 69.754%/89.088% | 3.637 |  11.68 |
 | ResNet 34                   | PyTorch\*                          | [resnet-34-pytorch](./resnet-34-pytorch/resnet-34-pytorch.md) | 73.30%/91.42% | 7.3409 | 21.7892 |
 | ResNet 50                   | PyTorch\*<br>Caffe2\*<br>TensorFlow\*| [resnet-50-pytorch](./resnet-50-pytorch/resnet-50-pytorch.md)<br>[resnet-50-caffe2](./resnet-50-caffe2/resnet-50-caffe2.md)<br>[resnet-50-tf](./resnet-50-tf/resnet-50-tf.md)| 75.168%/92.212%<br>76.128%/92.858%<br>76.38%/93.188%<br>76.17%/92.98% | 6.996~8.216 | 25.53 |
+| ReXNet V1 x1.0              | PyTorch\*                          | [rexnet-v1-x1.0](./rexnet-v1-x1.0/rexnet-v1-x1.0.md) | 77.86%/93.87% | 0.8325 | 4.7779 |
 | SE-Inception                | Caffe\*                            | [se-inception](./se-inception/se-inception.md) | 75.996%/92.964% | 4.091 | 11.922 |
 | SE-ResNet 50                | Caffe\*                            | [se-resnet-50](./se-resnet-50/se-resnet-50.md) | 77.596%/93.85% | 7.775 | 28.061 |
 | SE-ResNet 101               | Caffe\*                            | [se-resnet-101](./se-resnet-101/se-resnet-101.md)   | 78.252%/94.206% | 15.239 | 49.274  |
@@ -210,8 +212,8 @@ Colorization task is to predict colors of scene from grayscale image.
 
 | Model Name                | Implementation | OMZ Model Name | Accuracy | GFlops | mParams |
 | ------------------------- | ---------------| -------------- | -------- | ------ | ------- |
-| colorization-v2           | PyTorch\* | [colorization-v2](./colorization-v2/colorization-v2.md) | 57.75%/81.50% | 83.6045 |  32.2360 |
-| colorization-siggraph     | PyTorch\* | [colorization-siggraph](./colorization-siggraph/colorization-siggraph.md) | 58.25%/81.78% | 150.5441 |  34.0511 |
+| colorization-v2           | PyTorch\* | [colorization-v2](./colorization-v2/colorization-v2.md) | 26.99dB | 83.6045 |  32.2360 |
+| colorization-siggraph     | PyTorch\* | [colorization-siggraph](./colorization-siggraph/colorization-siggraph.md) | 27.73dB | 150.5441 |  34.0511 |
 
 ## Sound Classification
 
