@@ -70,6 +70,10 @@ struct DetectionResult : public ResultBase {
     std::vector<DetectedObject> objects;
 };
 
+struct SocialDistanceResult : public MetaData {
+    std::vector<std::tuple<int32_t, int32_t, float> edges;
+}
+
 struct SegmentationResult : public ResultBase {
     cv::Mat mask;
 };
