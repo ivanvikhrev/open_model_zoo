@@ -16,7 +16,12 @@ const static std::vector<cv::Point2f> kWorldPoints = {
     };
 
 SocialDistancing::SocialDistancing() {
-
+    cal_dist_ = 2.0;
+    cal_pts_.push_back({ 690, 522 });
+    cal_pts_.push_back({ 859, 513 });
+    cal_pts_.push_back({ 900, 634 });
+    cal_pts_.push_back({ 709, 645 });
+    homography_ = cv::findHomography(cal_pts_, kWorldPoints);
 }
 
 void SocialDistancing::create(const std::string &json_fn)
@@ -73,26 +78,25 @@ void SocialDistancing::create(const std::string &json_fn)
     cal_pts_.push_back({859, 513});
     cal_pts_.push_back({900, 634});
     cal_pts_.push_back({709, 645});
-    homography_ = cv::findHomography(cal_pts_, kWorldPoints);
+    //homography_ = cv::findHomography(cal_pts_, kWorldPoints);
 }
 
-std::unique_ptr<ResultBase> SocialDistancing::process(const DetectionResult& result, size_t personID)
-{
-    if (!result.metaData) {
+std::unique_ptr<ResultBase> SocialDistancing::process(const DetectionResult& detRes, size_t personID) {
+    if (!detRes.metaData) {
         throw std::invalid_argument("Renderer: metadata is null");
     }
 
-    auto outputImg = result.metaData->asRef<ImageMetaData>().img;
-    auto& detected = result.objects;
+    auto outputImg = detRes.metaData->asRef<ImageMetaData>().img;
+    auto& detected = detRes.objects;
 
     std::vector<DetectedObject> people;
     std::copy_if(detected.begin(), detected.end(), std::back_inserter(people),
-                 [](DetectedObject& o) { return o.labelID == personID; });
+                 [personID](const DetectedObject& o) { return o.labelID == personID; });
 
     std::vector<cv::Rect> rects;
     std::transform(std::begin(people), std::end(people),
                    std::back_inserter(rects),
-                [](DetectedObject& o) {
+                [](const DetectedObject& o) {
                     return cv::Rect(o.x, o.y, o.width, o.height);
                 });
 
@@ -117,18 +121,30 @@ std::unique_ptr<ResultBase> SocialDistancing::process(const DetectionResult& res
             auto tp0 = transformed[i];
             auto tp1 = transformed[j];
 
-            /// calculates distance between tp0 and tp1.
+            // calculates distance between tp0 and tp1.
             auto v = tp0 - tp1;
             float dist = std::sqrt(v.x * v.x + v.y * v.y) * cal_dist_;
             edges.push_back(std::make_tuple(i, j, dist));
         }
     }
     SocialDistanceResult* result = new SocialDistanceResult;
-    //*static_cast<ResultBase*>(result) = static_cast<ResultBase&>(infResult);
+    *static_cast<ResultBase*>(result) = static_cast<const ResultBase&>(detRes);
 
     // auto meta = std::make_shared<SDMeta>();
     // meta->data() = std::make_tuple(rects, edges);
-    result->objects = rects;
+    //for (auto& r : rects) {
+    //    DetectedObject desc;
+    //    desc.confidence = scores[i].second;
+    //    desc.labelID = scores[i].first / chSize;
+    //    desc.label = getLabelName(desc.labelID);
+    //    desc.x = bboxes[i].left;
+    //    desc.y = bboxes[i].top;
+    //    desc.width = bboxes[i].getWidth();
+    //    desc.height = bboxes[i].getHeight();
+
+    //    result->objects.push_back(desc);
+    //}
+    result->objects = people;
     result->edges = edges;
     return std::unique_ptr<ResultBase>(result);;
 }
@@ -184,98 +200,98 @@ std::unique_ptr<ResultBase> SocialDistancing::process(const DetectionResult& res
 //     return std::make_tuple(rects, edges);
 // }
 
-int32_t SocialDistancingPresenter::sId = 0;
+//int32_t SocialDistancingPresenter::sId = 0;
+//
+//SocialDistancingPresenter::SocialDistancingPresenter(bool show_image, double scale)
+//    :id_(sId++), show_image_(show_image)
+//{
+//    std::stringstream ss;
+//    ss << "preview [" << id_ << "]";
+//    win_name_ = ss.str();
+//    scale_ = scale;
+//}
+//
+//SocialDistancingPresenter::~SocialDistancingPresenter()
+//{
+//    if (show_image_)
+//        cv::destroyWindow(win_name_);
+//}
+//
+//void SocialDistancingPresenter::setParameters(const std::string &config_fn)
+//{
+//
+//}
 
-SocialDistancingPresenter::SocialDistancingPresenter(bool show_image, double scale)
-    :id_(sId++), show_image_(show_image)
-{
-    std::stringstream ss;
-    ss << "preview [" << id_ << "]";
-    win_name_ = ss.str();
-    scale_ = scale;
-}
-
-SocialDistancingPresenter::~SocialDistancingPresenter()
-{
-    if (show_image_)
-        cv::destroyWindow(win_name_);
-}
-
-void SocialDistancingPresenter::setParameters(const std::string &config_fn)
-{
-
-}
-
-void SocialDistancingPresenter::present(const Frame::Ptr &frame, const MetaBase::Ptr &meta)
-{
-    if (frame == nullptr)
-        return;
-
-    if (show_image_)
-    {
-        cv::Mat mat;
-
-        if (frame->pixelFormat() == PixelFormat::NV12)
-        {
-            cv::cvtColor(frame->data(0), mat, cv::COLOR_YUV2BGR_NV12);
-        }
-        else
-        {
-            mat = frame->data(0);
-        }
-
-        if (meta != nullptr)
-        {
-            auto sdmeta = std::dynamic_pointer_cast<pz::SocialDistancing::SDMeta>(meta);
-
-            if (sdmeta != nullptr)
-            {
-                std::vector<cv::Rect> rois;
-                std::vector<std::tuple<int32_t, int32_t, float>> edges;
-                std::tie(rois, edges) = sdmeta->data();
-
-                for (auto& r : rois)
-                {
-                    cv::rectangle(mat, r, {0, 255, 0}, 2);
-                }
-
-                for(auto& e : edges)
-                {
-                    int32_t i;
-                    int32_t j;
-                    float dist;
-                    std::tie(i, j, dist) = e;
-                    auto& r0 = rois[i];
-                    auto& r1 = rois[j];
-                    auto p0 = cv::Point(r0.x + (r0.width/2), r0.y + r0.height);
-                    auto p1 = cv::Point(r1.x + (r1.width/2), r1.y + r1.height);
-
-                    std::stringstream ss;
-                    ss << std::fixed << std::setprecision(1)
-                        << round(dist * 10.0f) / 10.0f << "m";
-
-                    auto c = ((p0 + p1) * 0.5f);
-
-                    if (dist <= 2.0f)
-                    {
-                        cv::line(mat, p0, p1, cv::Scalar(0, 0, 255), 1);
-                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(255, 255, 255), 4);
-                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 0, 255), 2);
-                    }
-                    else
-                    {
-                        cv::line(mat, p0, p1, cv::Scalar(255, 0, 0), 1);
-                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 255, 255), 4);
-                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 0, 0), 2);
-                    }
-                }
-            }
-        }
-        cv::Mat out_mat;
-        cv::resize(mat, out_mat, cv::Size(0, 0), scale_, scale_);
-        cv::imshow(win_name_, out_mat);
-        cv::waitKey(1);
-    }
+//void SocialDistancingPresenter::present(const Frame::Ptr &frame, const MetaBase::Ptr &meta)
+//{
+//    if (frame == nullptr)
+//        return;
+//
+//    if (show_image_)
+//    {
+//        cv::Mat mat;
+//
+//        if (frame->pixelFormat() == PixelFormat::NV12)
+//        {
+//            cv::cvtColor(frame->data(0), mat, cv::COLOR_YUV2BGR_NV12);
+//        }
+//        else
+//        {
+//            mat = frame->data(0);
+//        }
+//
+//        if (meta != nullptr)
+//        {
+//            auto sdmeta = std::dynamic_pointer_cast<pz::SocialDistancing::SDMeta>(meta);
+//
+//            if (sdmeta != nullptr)
+//            {
+//                std::vector<cv::Rect> rois;
+//                std::vector<std::tuple<int32_t, int32_t, float>> edges;
+//                std::tie(rois, edges) = sdmeta->data();
+//
+//                for (auto& r : rois)
+//                {
+//                    cv::rectangle(mat, r, {0, 255, 0}, 2);
+//                }
+//
+//                for(auto& e : edges)
+//                {
+//                    int32_t i;
+//                    int32_t j;
+//                    float dist;
+//                    std::tie(i, j, dist) = e;
+//                    auto& r0 = rois[i];
+//                    auto& r1 = rois[j];
+//                    auto p0 = cv::Point(r0.x + (r0.width/2), r0.y + r0.height);
+//                    auto p1 = cv::Point(r1.x + (r1.width/2), r1.y + r1.height);
+//
+//                    std::stringstream ss;
+//                    ss << std::fixed << std::setprecision(1)
+//                        << round(dist * 10.0f) / 10.0f << "m";
+//
+//                    auto c = ((p0 + p1) * 0.5f);
+//
+//                    if (dist <= 2.0f)
+//                    {
+//                        cv::line(mat, p0, p1, cv::Scalar(0, 0, 255), 1);
+//                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(255, 255, 255), 4);
+//                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 0, 255), 2);
+//                    }
+//                    else
+//                    {
+//                        cv::line(mat, p0, p1, cv::Scalar(255, 0, 0), 1);
+//                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 255, 255), 4);
+//                        cv::putText(mat, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 0, 0), 2);
+//                    }
+//                }
+//            }
+//        }
+//        cv::Mat out_mat;
+//        cv::resize(mat, out_mat, cv::Size(0, 0), scale_, scale_);
+//        cv::imshow(win_name_, out_mat);
+//        cv::waitKey(1);
+//    }
 //    else
 //    {
 //        auto sdmeta = std::dynamic_pointer_cast<pz::SocialDistancing::SDMeta>(meta);
@@ -293,7 +309,5 @@ void SocialDistancingPresenter::present(const Frame::Ptr &frame, const MetaBase:
 //            std::cout << "[" << std::setw(6) << frame->frameId() << "] num rois: 0, num edges: 0" << std::endl;
 //        }
 //    }
-}
-
-
-}
+//}
+//}

@@ -36,6 +36,7 @@
 #include <utils/performance_metrics.hpp>
 #include <utils/slog.hpp>
 
+#include <models/detection_model_centernet.h>
 #include <models/detection_model_yolo.h>
 #include <models/detection_model_ssd.h>
 #include <pipelines/async_pipeline.h>
@@ -229,16 +230,16 @@ cv::Mat renderDetectionData(const DetectionResult& result, const ColorPalette& p
         slog::info << " Class ID  | Confidence | XMIN | YMIN | XMAX | YMAX " << slog::endl;
     }
 
-    for (auto obj : result.objects) {
+    for (auto& obj : result.objects) {
         if (FLAGS_r) {
             slog::info << " "
-                       << std::left << std::setw(9) << obj.label << " | "
-                       << std::setw(10) << obj.confidence << " | "
-                       << std::setw(4) << std::max(int(obj.x), 0) << " | "
-                       << std::setw(4) << std::max(int(obj.y), 0) << " | "
-                       << std::setw(4) << std::min(int(obj.x + obj.width), outputImg.cols) << " | "
-                       << std::setw(4) << std::min(int(obj.y + obj.height), outputImg.rows)
-                       << slog::endl;
+                << std::left << std::setw(9) << obj.label << " | "
+                << std::setw(10) << obj.confidence << " | "
+                << std::setw(4) << std::max(int(obj.x), 0) << " | "
+                << std::setw(4) << std::max(int(obj.y), 0) << " | "
+                << std::setw(4) << std::min(int(obj.x + obj.width), outputImg.cols) << " | "
+                << std::setw(4) << std::min(int(obj.y + obj.height), outputImg.rows)
+                << slog::endl;
         }
 
         std::ostringstream conf;
@@ -251,6 +252,38 @@ cv::Mat renderDetectionData(const DetectionResult& result, const ColorPalette& p
         cv::rectangle(outputImg, obj, color, 2);
     }
 
+
+    try {
+        for(auto& e : result.asRef<SocialDistanceResult>().edges) {
+            int32_t i;
+            int32_t j;
+            float dist;
+            std::tie(i, j, dist) = e;
+            auto& r0 = result.objects[i];
+            auto& r1 = result.objects[j];
+            auto p0 = cv::Point(r0.x + (r0.width/2), r0.y + r0.height);
+            auto p1 = cv::Point(r1.x + (r1.width/2), r1.y + r1.height);
+
+            std::stringstream ss;
+            ss << std::fixed << std::setprecision(1)
+                << round(dist * 10.0f) / 10.0f << "m";
+
+            auto c = ((p0 + p1) * 0.5f);
+
+            if (dist <= 2.0f) {
+                cv::line(outputImg, p0, p1, cv::Scalar(0, 0, 255), 1);
+                cv::putText(outputImg, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(255, 255, 255), 4);
+                cv::putText(outputImg, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.5, cv::Scalar(0, 0, 255), 2);
+            }
+            else {
+                cv::line(outputImg, p0, p1, cv::Scalar(255, 0, 0), 1);
+                cv::putText(outputImg, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 255, 255), 4);
+                cv::putText(outputImg, ss.str(), c, cv::FONT_HERSHEY_PLAIN, 1.3, cv::Scalar(255, 0, 0), 2);
+            }
+        }
+    }
+    catch(const std::bad_cast&) {}
+
     return outputImg;
 }
 
@@ -258,7 +291,7 @@ cv::Mat renderDetectionData(const DetectionResult& result, const ColorPalette& p
 int main(int argc, char *argv[]) {
     try {
         PerformanceMetrics metrics;
-
+        //cv::findHomography(cv::Mat(), cv::Mat());
         slog::info << "InferenceEngine: " << printable(*InferenceEngine::GetInferenceEngineVersion()) << slog::endl;
 
         // ------------------------------ Parsing and validation of input args ---------------------------------
@@ -278,7 +311,11 @@ int main(int argc, char *argv[]) {
         ColorPalette palette(labels.size() > 0 ? labels.size() : 100);
 
         std::unique_ptr<ModelBase> model;
-        if (FLAGS_at == "ssd") {
+        SocialDistancing sd;
+        if (FLAGS_at == "centernet") {
+            model.reset(new ModelCenterNet(FLAGS_m, (float)FLAGS_t, labels));
+        }
+        else if (FLAGS_at == "ssd") {
             model.reset(new ModelSSD(FLAGS_m, (float)FLAGS_t, FLAGS_auto_resize, labels));
         }
         else if (FLAGS_at == "yolo") {
@@ -325,8 +362,9 @@ int main(int argc, char *argv[]) {
             //--- If you need just plain data without rendering - cast result's underlying pointer to DetectionResult*
             //    and use your own processing instead of calling renderDetectionData().
             while ((result = pipeline.getResult()) && keepRunning) {
-                
-                cv::Mat outFrame = renderDetectionData(result->asRef<DetectionResult>(), palette);
+                //sd.process(result->asRef<DetectionResult>(), 0);
+                cv::Mat outFrame = renderDetectionData(sd.process(result->asRef<DetectionResult>(), 1)->asRef<DetectionResult>(), palette);
+                //cv::Mat outFrame = renderDetectionData(result->asRef<DetectionResult>(), palette);
                 //--- Showing results and device information
                 presenter.drawGraphs(outFrame);
                 metrics.update(result->metaData->asRef<ImageMetaData>().timeStamp,

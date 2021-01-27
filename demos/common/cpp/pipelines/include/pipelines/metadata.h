@@ -50,7 +50,3 @@ struct ClassificationImageMetaData : public ImageMetaData {
         groundTruthId(groundTruthId) {
     }
 };
-
-struct SocialDistanceMetaData : public MetaData {
-
-}

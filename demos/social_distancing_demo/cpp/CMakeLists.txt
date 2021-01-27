@@ -9,4 +9,4 @@ ie_add_sample(NAME social_distancing_demo
               SOURCES ${SRC_FILES}
               HEADERS ${H_FILES}
               DEPENDENCIES monitors models pipelines
-              OPENCV_DEPENDENCIES highgui videoio imgproc)
+              OPENCV_DEPENDENCIES highgui videoio imgproc calib3d)

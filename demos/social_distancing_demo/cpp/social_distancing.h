@@ -1,8 +1,9 @@
 #pragma once
 
 #include <models/results.h>
+#include <pipelines/metadata.h>
 #include <tuple>
-//#include "opencv2/opencv.hpp"
+#include "opencv2/opencv.hpp"
 
 // #include "common/no_copy.h"
 // #include "common/types.h"
