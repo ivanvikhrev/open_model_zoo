@@ -15,12 +15,10 @@
 */
 
 #include <algorithm>
-#include "models/detection_model_faceboxes.h"
-#include <utils/slog.hpp>
-#include <utils/common.hpp>
 #include <ngraph/ngraph.hpp>
-
-using namespace InferenceEngine;
+#include <utils/common.hpp>
+#include <utils/slog.hpp>
+#include "models/detection_model_faceboxes.h"
 
 ModelFaceBoxes::ModelFaceBoxes(const std::string& modelFileName,
     float confidenceThreshold, bool useAutoResize, float boxIOUThreshold)
@@ -33,26 +31,26 @@ void ModelFaceBoxes::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwor
 // --------------------------- Configure input & output -------------------------------------------------
 // --------------------------- Prepare input blobs ------------------------------------------------------
     slog::info << "Checking that the inputs are as the demo expects" << slog::endl;
-    InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
+    InferenceEngine::InputsDataMap inputInfo(cnnNetwork.getInputsInfo());
 
     if (inputInfo.size() != 1) {
         throw std::logic_error("This demo accepts networks that have only one input");
     }
 
-    InputInfo::Ptr& input = inputInfo.begin()->second;
-    const TensorDesc& inputDesc = input->getTensorDesc();
-    input->setPrecision(Precision::U8);
+    InferenceEngine::InputInfo::Ptr& input = inputInfo.begin()->second;
+    const InferenceEngine::TensorDesc& inputDesc = input->getTensorDesc();
+    input->setPrecision(InferenceEngine::Precision::U8);
 
     if (inputDesc.getDims()[1] != 3) {
          throw std::logic_error("Expected 3-channel input");
      }
 
     if (useAutoResize) {
-        input->getPreProcess().setResizeAlgorithm(ResizeAlgorithm::RESIZE_BILINEAR);
-        input->getInputData()->setLayout(Layout::NHWC);
+        input->getPreProcess().setResizeAlgorithm(InferenceEngine::ResizeAlgorithm::RESIZE_BILINEAR);
+        input->getInputData()->setLayout(InferenceEngine::Layout::NHWC);
     }
     else {
-        input->getInputData()->setLayout(Layout::NCHW);
+        input->getInputData()->setLayout(InferenceEngine::Layout::NCHW);
     }
 
 // --------------------------- Reading image input parameters -------------------------------------------
@@ -70,7 +68,7 @@ void ModelFaceBoxes::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwor
         throw std::logic_error("This demo expect networks that have 2 outputs blobs");
     }
 
-    const TensorDesc& outputDesc = outputInfo.begin()->second->getTensorDesc();
+    const InferenceEngine::TensorDesc& outputDesc = outputInfo.begin()->second->getTensorDesc();
     maxProposalsCount = outputDesc.getDims()[1];
 
     for (auto& output : outputInfo) {
@@ -81,7 +79,7 @@ void ModelFaceBoxes::prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwor
 
 }
 
-void calculateAnchors(std::vector<ModelFaceBoxes::Anchor>* anchors, const std::vector<float>& vx, const std::vector<float>& vy,
+void calculateAnchors(std::vector<ModelFaceBoxes::Anchor>& anchors, const std::vector<float>& vx, const std::vector<float>& vy,
     const int minSize, const int step) {
     float skx = static_cast<float>(minSize);
     float sky = static_cast<float>(minSize);
@@ -98,14 +96,14 @@ void calculateAnchors(std::vector<ModelFaceBoxes::Anchor>* anchors, const std::v
 
     for (auto cy : dense_cy) {
         for (auto cx : dense_cx) {
-            anchors->push_back({ static_cast<float>(cx - 0.5f * skx), static_cast<float>(cy - 0.5f * sky),
+            anchors.push_back({ static_cast<float>(cx - 0.5f * skx), static_cast<float>(cy - 0.5f * sky),
                 static_cast<float>( cx + 0.5f * skx), static_cast<float>(cy + 0.5f * sky) });  // left top right bottom
         }
     }
 
 }
 
-void calculateAnchorsZeroLevel(std::vector<ModelFaceBoxes::Anchor>* anchors, const int fx, const int fy,
+void calculateAnchorsZeroLevel(std::vector<ModelFaceBoxes::Anchor>& anchors, const int fx, const int fy,
     const std::vector<int>& minSizes, const int step) {
     for (auto s : minSizes) {
         std::vector<float> vx, vy;
@@ -143,10 +141,10 @@ void ModelFaceBoxes::priorBoxes(const std::vector<std::pair<size_t, size_t>>& fe
         for (int i = 0; i < featureMaps[k].first; ++i) {
             for (int j = 0; j < featureMaps[k].second; ++j) {
                 if (k == 0) {
-                    calculateAnchorsZeroLevel(&anchors, j, i,  minSizes[k], steps[k]);;
+                    calculateAnchorsZeroLevel(anchors, j, i,  minSizes[k], steps[k]);;
                 }
                 else {
-                    calculateAnchors(&anchors, { j + 0.5f }, { i + 0.5f }, minSizes[k][0], steps[k]);
+                    calculateAnchors(anchors, { j + 0.5f }, { i + 0.5f }, minSizes[k][0], steps[k]);
                 }
             }
         }
@@ -195,10 +193,10 @@ std::vector<int> nms(const std::vector<ModelFaceBoxes::Anchor>& boxes, const std
 }
 
 
-std::pair<std::vector<size_t>, std::vector<float>> filterScores(InferenceEngine::MemoryBlob::Ptr scoreInfRes, const float confidenceThreshold) {
+std::pair<std::vector<size_t>, std::vector<float>> filterScores(const InferenceEngine::MemoryBlob::Ptr& scoreInfRes, const float confidenceThreshold) {
     auto desc = scoreInfRes->getTensorDesc();
     auto sz = desc.getDims();
-    LockedMemory<const void> outputMapped = scoreInfRes->rmap();
+    InferenceEngine::LockedMemory<const void> outputMapped = scoreInfRes->rmap();
     const float* scoresPtr = outputMapped.as<float*>();
 
     std::vector<size_t> indices;
@@ -215,9 +213,9 @@ std::pair<std::vector<size_t>, std::vector<float>> filterScores(InferenceEngine:
     return { indices, scores };
 }
 
-std::vector<ModelFaceBoxes::Anchor> filterBBoxes(InferenceEngine::MemoryBlob::Ptr bboxesInfRes, const std::vector<ModelFaceBoxes::Anchor>& anchors,
+std::vector<ModelFaceBoxes::Anchor> filterBBoxes(const InferenceEngine::MemoryBlob::Ptr& bboxesInfRes, const std::vector<ModelFaceBoxes::Anchor>& anchors,
     const std::vector<size_t>& validIndices, const std::vector<float>& variance) {
-    LockedMemory<const void> bboxesOutputMapped = bboxesInfRes->rmap();
+    InferenceEngine::LockedMemory<const void> bboxesOutputMapped = bboxesInfRes->rmap();
     auto desc = bboxesInfRes->getTensorDesc();
     auto sz = desc.getDims();
     const float *bboxesPtr = bboxesOutputMapped.as<float*>();

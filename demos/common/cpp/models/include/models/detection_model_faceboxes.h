@@ -36,13 +36,13 @@ public:
     std::unique_ptr<ResultBase> postprocess(InferenceResult& infResult) override;
 
 protected:
-    int maxProposalsCount;
+    size_t maxProposalsCount;
     const float boxIOUThreshold;
     const std::vector<int> steps;
     const std::vector<float> variance;
     const std::vector<std::vector<int>> minSizes;
     std::vector<Anchor> anchors;
-    virtual void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) override;
+    void prepareInputsOutputs(InferenceEngine::CNNNetwork& cnnNetwork) override;
     void priorBoxes(const std::vector<std::pair<size_t, size_t>>& featureMaps);
 
 };
