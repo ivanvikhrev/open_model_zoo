@@ -34,6 +34,14 @@ if not "%1" == "" (
         shift & shift
         goto argParse
     )
+    rem to build more than one specific demo use quotation marks,
+    rem list the necessary demos separated by space,
+    rem ex. --target="classification_demo segmentation_demo"
+    if "%1" == "--target" (
+        set EXTRA_CMAKE_BUILD_OPTS=%EXTRA_CMAKE_BUILD_OPTS% %1 %~2
+        shift & shift
+        goto argParse
+    )
 
     if not "%VS_VERSION%" == "" (
         echo Unexpected argument: "%1"
@@ -122,8 +130,7 @@ cd "%SOLUTION_DIR64%" && cmake -G "Visual Studio !VS_VERSION!" -A %PLATFORM% %EX
 echo.
 echo ###############^|^| Build Open Model Zoo Demos using MS Visual Studio ^|^|###############
 echo.
-echo cmake --build . --config Release
-cmake --build . --config Release
+cmake --build . --config Release %EXTRA_CMAKE_BUILD_OPTS%
 if ERRORLEVEL 1 goto errorHandling
 
 echo Done.
